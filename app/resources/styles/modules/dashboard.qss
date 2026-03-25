@@ -1,0 +1,137 @@
+/*
+================================================================================
+  DASHBOARD MODULE — dashboard.qss
+================================================================================
+*/
+
+/* ─── STAT CARDS ────────────────────────────────────────────────────────────── */
+QFrame[class="Card"], QFrame[class="dashboard-card"] {
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1.5px solid #E8ECF0;
+}
+QFrame[class="Card"]:hover, QFrame[class="dashboard-card"]:hover {
+    border-color: #CBD5E1;
+}
+
+QLabel[class="CardTitle"], QLabel[class="kpi-label"] {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748B;
+    background: transparent;
+}
+QLabel[class="StatValue"], QLabel[class="kpi-value"] {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #0F172A;
+    background: transparent;
+}
+QLabel[class="StatChange"] {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: transparent;
+}
+QLabel[class="HeaderTitle"] {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.5px;
+    background: transparent;
+}
+QLabel[class="Breadcrumb"] {
+    font-size: 13px;
+    color: #94A3B8;
+    font-weight: 400;
+    background: transparent;
+}
+
+/* ─── STATUS BADGES ─────────────────────────────────────────────────────────── */
+.Badge_Success { color:#15803D; background:#DCFCE7; }
+.Badge_Error   { color:#DC2626; background:#FEE2E2; }
+.Badge_Warning { color:#B45309; background:#FEF3C7; }
+.Badge_Info    { color:#0369A1; background:#E0F2FE; }
+
+/* ─── PROGRESS BARS ─────────────────────────────────────────────────────────── */
+QProgressBar {
+    border: none;
+    background: #F1F5F9;
+    border-radius: 5px;
+    min-height: 8px;
+    max-height: 8px;
+}
+QProgressBar::chunk { border-radius: 5px; }
+QProgressBar[type="emerald"]::chunk { background: #059669; }
+QProgressBar[type="teal"]::chunk    { background: #14B8A6; }
+QProgressBar[type="lime"]::chunk    { background: #84CC16; }
+
+.MetricPercent { font-size: 13px; font-weight: 800; background: transparent; }
+.MetricPercent_Emerald { color: #059669; }
+.MetricPercent_Teal    { color: #14B8A6; }
+.MetricPercent_Lime    { color: #84CC16; }
+
+/* ─── VIEW ALL BUTTON ───────────────────────────────────────────────────────── */
+.ViewAllBtn {
+    color: #059669;
+    font-weight: 700;
+    font-size: 12px;
+    border: none;
+    background: transparent;
+    padding: 5px 10px;
+    border-radius: 7px;
+}
+.ViewAllBtn:hover { background: #ECFDF5; }
+
+/* ─── TABLE HEADER ──────────────────────────────────────────────────────────── */
+QHeaderView::section {
+    background: #F8FAFC;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 2px solid #E8ECF0;
+}
+
+/* ─── QUICK ACTION BUTTONS ──────────────────────────────────────────────────── */
+.QuickActionBtn {
+    text-align: left;
+    padding: 0 16px;
+    border: 1.5px solid #E8ECF0;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    background: white;
+    min-height: 46px;
+}
+.QuickActionBtn:hover { border-color: #CBD5E1; background: #F8FAFC; }
+.QuickActionBtn_Success:hover { background:#F0FDF4; border-color:#059669; color:#059669; }
+.QuickActionBtn_Warning:hover { background:#FFFBEB; border-color:#F59E0B; color:#D97706; }
+.QuickActionBtn_Info:hover    { background:#F0F9FF; border-color:#0EA5E9; color:#0369A1; }
+.QuickActionBtn_Primary:hover { background:#ECFDF5; border-color:#059669; color:#059669; }
+
+/* ─── ALERTS ────────────────────────────────────────────────────────────────── */
+.AlertTitle    { font-size: 15px; font-weight: 700; color: #EF4444; background: transparent; }
+.AlertItemLabel{ font-size: 13px; font-weight: 600; color: #0F172A; background: transparent; }
+.AlertBadge    { color:#DC2626; background:#FEE2E2; font-size:11px; font-weight:700; padding:4px 10px; border-radius:7px; }
+.AlertOk       { color:#15803D; font-size:13px; font-weight:600; background:#DCFCE7; border-radius:10px; padding:12px; }
+.AlertError    { color:#DC2626; font-size:13px; background:#FEE2E2; border-radius:10px; padding:12px; }
+
+/* ─── TOP PRODUCTS ──────────────────────────────────────────────────────────── */
+.NoSalesLabel  { color: #94A3B8; font-size: 13px; padding: 14px 0; background: transparent; }
+.RankLabel     { color: white; border-radius: 14px; font-size: 11px; font-weight: 800; padding: 4px 10px; }
+.ProductName   { font-size: 14px; font-weight: 700; color: #0F172A; background: transparent; }
+.ProductRevenue{ font-size: 12px; color: #94A3B8; background: transparent; }
+.ProductSales  { font-size: 13px; font-weight: 700; color: #059669; background: transparent; }
+
+/* ─── ORDER STATUS ──────────────────────────────────────────────────────────── */
+.StatusBadge_Completed { color:#15803D; background:#DCFCE7; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Pending   { color:#B45309; background:#FEF3C7; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Running   { color:#0369A1; background:#E0F2FE; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Error     { color:#DC2626; background:#FEE2E2; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Hold      { color:#6D28D9; background:#EDE9FE; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }

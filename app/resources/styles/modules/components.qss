@@ -1,0 +1,224 @@
+/*
+================================================================================
+  COMPONENTS — components.qss
+  Shared reusable components across all modules
+================================================================================
+*/
+
+/* ─── NAV BUTTON (Top Navbar) ───────────────────────────────────────────────── */
+QPushButton[class="NavButton"] {
+    background-color: transparent;
+    border: none;
+    font-weight: 500;
+    color: #CBD5E1;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+QPushButton[class="NavButton"]:hover {
+    background-color: rgba(255,255,255,0.08);
+    color: #FFFFFF;
+}
+QPushButton[class="NavButton"]:checked {
+    background-color: #059669;
+    color: white;
+    font-weight: 700;
+}
+
+/* ─── PAGE LAYOUT ───────────────────────────────────────────────────────────── */
+QWidget[class="page-container"] { background: #F1F5F9; }
+QScrollArea, QScrollArea > QWidget > QWidget { background: #F1F5F9; }
+
+/* ─── PAGE HEADER ───────────────────────────────────────────────────────────── */
+QFrame[class="page-header"] {
+    background-color: #FFFFFF;
+    border-bottom: 1.5px solid #E2E8F0;
+    border-radius: 0;
+}
+
+/* ─── SECTION HEADERS ───────────────────────────────────────────────────────── */
+QLabel[class="section-header"] {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    background: transparent;
+}
+QLabel[class="page-title"] {
+    color: #0F172A;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: transparent;
+}
+QLabel[class="page-subtitle"] {
+    color: #64748B;
+    font-size: 13px;
+    font-weight: 400;
+    background: transparent;
+}
+
+/* ─── CARDS ─────────────────────────────────────────────────────────────────── */
+QFrame[class="card"], QFrame[class="Card"] {
+    background-color: #FFFFFF;
+    border: 1.5px solid #E8ECF0;
+    border-radius: 14px;
+}
+QFrame[class="card"]:hover, QFrame[class="Card"]:hover {
+    border-color: #CBD5E1;
+}
+QFrame[class="stat-card"] {
+    background-color: #FFFFFF;
+    border: 1.5px solid #E8ECF0;
+    border-radius: 16px;
+}
+
+/* ─── DIVIDER ───────────────────────────────────────────────────────────────── */
+QFrame[class="divider"], QFrame[class="Divider"] {
+    background-color: #E2E8F0;
+    max-height: 1px;
+    min-height: 1px;
+    border: none;
+}
+
+/* ─── BUTTONS: Primary ──────────────────────────────────────────────────────── */
+QPushButton[class="btn-primary"], QPushButton[class="Primary"] {
+    background-color: #059669;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 36px;
+}
+QPushButton[class="btn-primary"]:hover, QPushButton[class="Primary"]:hover { background-color: #047857; }
+QPushButton[class="btn-primary"]:pressed, QPushButton[class="Primary"]:pressed { background-color: #065F46; }
+QPushButton[class="btn-primary"]:disabled { background-color: #A7F3D0; }
+
+/* ─── BUTTONS: Danger ───────────────────────────────────────────────────────── */
+QPushButton[class="btn-danger"], QPushButton[class="Danger"], QPushButton[class="Destructive"] {
+    background-color: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 36px;
+}
+QPushButton[class="btn-danger"]:hover { background-color: #DC2626; }
+QPushButton[class="btn-danger"]:pressed { background-color: #B91C1C; }
+
+/* ─── BUTTONS: Warning ──────────────────────────────────────────────────────── */
+QPushButton[class="btn-warning"] {
+    background-color: #F59E0B;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 36px;
+}
+QPushButton[class="btn-warning"]:hover { background-color: #D97706; }
+QPushButton[class="btn-warning"]:pressed { background-color: #B45309; }
+
+/* ─── BUTTONS: Ghost/Secondary ──────────────────────────────────────────────── */
+QPushButton[class="btn-ghost"], QPushButton[class="Ghost"], QPushButton[class="Secondary"] {
+    background-color: #FFFFFF;
+    color: #475569;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 9px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 36px;
+}
+QPushButton[class="btn-ghost"]:hover { background-color: #F8FAFC; border-color: #CBD5E1; color: #0F172A; }
+
+/* ─── BUTTONS: Icon ─────────────────────────────────────────────────────────── */
+QPushButton[class="icon-btn"] {
+    background-color: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 9px;
+    padding: 7px;
+    min-height: 34px;
+    min-width: 34px;
+}
+QPushButton[class="icon-btn"]:hover {
+    background-color: #ECFDF5;
+    border-color: #059669;
+}
+
+/* ─── BADGES ────────────────────────────────────────────────────────────────── */
+QLabel[class="Badge"], QLabel[class="badge"] {
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+QLabel[class="BadgeSuccess"], QLabel[class="badge-success"] {
+    background-color: #DCFCE7;
+    color: #15803D;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QLabel[class="BadgeWarning"], QLabel[class="badge-warning"] {
+    background-color: #FEF3C7;
+    color: #B45309;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QLabel[class="BadgeError"], QLabel[class="badge-error"], QLabel[class="badge-danger"] {
+    background-color: #FEE2E2;
+    color: #DC2626;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QLabel[class="BadgeInfo"], QLabel[class="badge-info"] {
+    background-color: #E0F2FE;
+    color: #0369A1;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ─── STATUS BADGES ─────────────────────────────────────────────────────────── */
+.StatusBadge_Completed { color:#15803D; background:#DCFCE7; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Pending   { color:#B45309; background:#FEF3C7; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Running   { color:#0369A1; background:#E0F2FE; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Error     { color:#DC2626; background:#FEE2E2; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+.StatusBadge_Hold      { color:#6D28D9; background:#EDE9FE; font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; }
+
+/* ─── DIALOGS ───────────────────────────────────────────────────────────────── */
+QDialog { background-color: #F8FAFC; }
+QMessageBox { background-color: #FFFFFF; }
+QMessageBox QPushButton {
+    background-color: #059669;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 20px;
+    font-weight: 700;
+    min-width: 80px;
+}
+QMessageBox QPushButton:hover { background-color: #047857; }
+QMessageBox QPushButton[text="No"], QMessageBox QPushButton[text="Cancel"] {
+    background-color: #F1F5F9;
+    color: #64748B;
+    border: 1.5px solid #E2E8F0;
+}
+QMessageBox QPushButton[text="No"]:hover,
+QMessageBox QPushButton[text="Cancel"]:hover {
+    background-color: #E2E8F0;
+    color: #0F172A;
+}

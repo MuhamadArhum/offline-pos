@@ -1,0 +1,286 @@
+/* 
+================================================================================
+  LOGIN MODULE STYLESHEET (login.qss) - Enhanced Professional Design
+  Note: Primary styles are now embedded in login_window.py for self-containment.
+  This file serves as a fallback/reference and can override embedded styles.
+================================================================================
+*/
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEFT PANEL - Branding Area
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QFrame#login-left-panel {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #064e3b, stop:0.5 #059669, stop:1 #047857);
+    border-top-left-radius: 24px;
+    border-bottom-left-radius: 24px;
+}
+
+QFrame#logo-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 80px;
+    padding: 20px;
+}
+
+QLabel#login-brand-title {
+    color: white;
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+QLabel#login-brand-tagline {
+    color: #a7f3d0;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+QLabel#login-feature-text {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QLabel#login-version {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+/* Window control buttons */
+QPushButton#window-btn-minimize,
+QPushButton#window-btn-close {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 18px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QPushButton#window-btn-minimize:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+QPushButton#window-btn-close:hover {
+    background: #ef4444;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RIGHT PANEL - Form Area
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QFrame#login-right-panel {
+    background: #ffffff;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
+}
+
+QLabel#login-greeting {
+    color: #1e293b;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+QLabel#login-welcome-sub {
+    color: #64748b;
+    font-size: 15px;
+}
+
+QLabel#login-field-label {
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INPUT FIELDS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QFrame#login-input-container {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    min-height: 52px;
+}
+
+QFrame#login-input-container:hover {
+    border-color: #cbd5e1;
+}
+
+QLineEdit#login-input {
+    background: transparent;
+    border: none;
+    color: #1e293b;
+    font-size: 14px;
+    padding: 0;
+    selection-background-color: #d1fae5;
+}
+
+QLineEdit#login-input::placeholder {
+    color: #94a3b8;
+}
+
+QPushButton#toggle-pass-btn {
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+}
+
+QPushButton#toggle-pass-btn:hover {
+    background: #f1f5f9;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REMEMBER ME CHECKBOX
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QCheckBox#login-remember {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    spacing: 8px;
+}
+
+QCheckBox#login-remember::indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+
+QCheckBox#login-remember::indicator:hover {
+    border-color: #059669;
+}
+
+QCheckBox#login-remember::indicator:checked {
+    background: #059669;
+    border-color: #059669;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ERROR MESSAGE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QFrame#login-error-frame {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+}
+
+QLabel#login-error-text {
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGIN BUTTON
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QPushButton#login-btn {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #059669, stop:1 #10b981);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    min-height: 54px;
+}
+
+QPushButton#login-btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #047857, stop:1 #059669);
+}
+
+QPushButton#login-btn:pressed {
+    background: #064e3b;
+}
+
+QPushButton#login-btn:disabled {
+    background: #94a3b8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER ELEMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QLabel#login-hint {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+QLabel#login-time {
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEGACY SUPPORT (old class-based selectors)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+QFrame[class="login-left-panel"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #064e3b, stop:0.5 #059669, stop:1 #047857);
+    border-top-left-radius: 24px;
+    border-bottom-left-radius: 24px;
+}
+
+QFrame[class="login-right-panel"] {
+    background: #ffffff;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
+}
+
+QLabel[class="login-title"] {
+    color: white;
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+QLabel[class="login-tagline"] {
+    color: #a7f3d0;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+QLabel[class="login-welcome"] {
+    color: #1e293b;
+    font-size: 32px;
+    font-weight: 800;
+}
+
+QLabel[class="login-subtitle"] {
+    color: #64748b;
+    font-size: 15px;
+}
+
+QPushButton[class="login-btn"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #059669, stop:1 #10b981);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 54px;
+}
+
+QPushButton[class="login-btn"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #047857, stop:1 #059669);
+}
+
+QLabel[class="login-error"] {
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 500;
+}

@@ -1,0 +1,64 @@
+/*
+================================================================================
+  ADMIN MODULE — admin.qss
+================================================================================
+*/
+
+QTableWidget[class="admin-table"] {
+    background:#FFFFFF;
+    alternate-background-color:#FAFBFC;
+    gridline-color:transparent;
+    border:1.5px solid #E2E8F0;
+    border-radius:14px;
+}
+QTableWidget[class="admin-table"]::item {
+    padding:13px 14px;
+    border-bottom:1px solid #F1F5F9;
+}
+QTableWidget[class="admin-table"]::item:selected {
+    background:#ECFDF5;
+    color:#047857;
+}
+QTableWidget[class="admin-table"]::item:hover {
+    background:#F8FAFC;
+}
+QHeaderView::section {
+    background:#F8FAFC;
+    color:#64748B;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    padding:13px 14px;
+    border:none;
+    border-bottom:2px solid #E2E8F0;
+}
+
+/* Role Badges */
+QLabel[class="badge-admin"]   { background:#EEF2FF; color:#4338CA; border-radius:8px; padding:4px 12px; font-size:11px; font-weight:700; }
+QLabel[class="badge-cashier"] { background:#DCFCE7; color:#15803D; border-radius:8px; padding:4px 12px; font-size:11px; font-weight:700; }
+QLabel[class="badge-kitchen"] { background:#FEF3C7; color:#B45309; border-radius:8px; padding:4px 12px; font-size:11px; font-weight:700; }
+QLabel[class="badge-staff"]   { background:#E0F2FE; color:#0369A1; border-radius:8px; padding:4px 12px; font-size:11px; font-weight:700; }
+QLabel[class="badge-manager"] { background:#F0FDF4; color:#059669; border-radius:8px; padding:4px 12px; font-size:11px; font-weight:700; }
+
+/* Action Buttons */
+QPushButton[class="admin-action-btn"] {
+    background:#FFFFFF; border:1.5px solid #E2E8F0;
+    border-radius:8px; padding:6px 12px;
+    font-size:12px; font-weight:600; color:#475569;
+}
+QPushButton[class="admin-action-btn"]:hover {
+    background:#F8FAFC; border-color:#CBD5E1; color:#0F172A;
+}
+QPushButton[class="admin-edit-btn"] {
+    background:#F0FDF4; color:#059669;
+    border:1.5px solid #A7F3D0; border-radius:8px;
+    padding:6px 12px; font-size:12px; font-weight:600;
+}
+QPushButton[class="admin-edit-btn"]:hover { background:#DCFCE7; }
+QPushButton[class="admin-delete-btn"] {
+    background:#FEF2F2; color:#DC2626;
+    border:1.5px solid #FECACA; border-radius:8px;
+    padding:6px 12px; font-size:12px; font-weight:600;
+}
+QPushButton[class="admin-delete-btn"]:hover { background:#FEE2E2; }

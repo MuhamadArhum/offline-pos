@@ -1,0 +1,18 @@
+PyQt6
+pymongo
+qtawesome
+fpdf
+bcrypt
+python-dotenv
+requests
+pandas
+openpyxl
+SpeechRecognition
+pywhatkit
+pyttsx3
+# API Dependencies
+flask
+flask-cors
+# PyAudio - Optional: Requires Microsoft C++ Build Tools on Windows
+# Install via: pip install pyaudio (needs Visual Studio C++ build tools)
+# Or download wheel from: https://github.com/intxcc/pyaudio_binaries
