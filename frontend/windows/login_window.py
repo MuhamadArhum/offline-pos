@@ -48,7 +48,7 @@ class LoginWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Restaurant POS - Login")
+        self.setWindowTitle("Abyte POS - Login")
         self.resize(1100, 700)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)

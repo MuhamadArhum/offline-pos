@@ -5,7 +5,7 @@ Table Selection / Management view for the Sales module.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QFrame, QLabel, QPushButton, QScrollArea,
-    QMessageBox, QInputDialog, QDialog,
+    QMessageBox, QInputDialog, QDialog, QLineEdit,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
@@ -31,6 +31,54 @@ from frontend.dialogs.sales_dialogs import (
 )
 from frontend.modules.sales.kitchen_display import KitchenDisplay
 from frontend.pages.reports_page import ExpenseDialog, DayCloseDialog, ShiftReportDialog
+
+
+class _TextInputDialog(QDialog):
+    """Styled text input dialog with proper dark text on light background."""
+
+    def __init__(self, title, prompt, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setFixedWidth(360)
+        self.setStyleSheet("""
+            QDialog   { background: #ffffff; border-radius: 12px; }
+            QLabel    { color: #1e293b; font-size: 13px; font-weight: 600; }
+            QLineEdit {
+                background: #f1f5f9; color: #1e293b;
+                border: 1.5px solid #e2e8f0; border-radius: 8px;
+                padding: 8px 12px; font-size: 14px; font-weight: 600;
+            }
+            QLineEdit:focus { background: #ffffff; border-color: #059669; }
+            QPushButton {
+                border-radius: 8px; font-size: 13px;
+                font-weight: 700; padding: 8px 20px; border: none;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
+
+        lbl = QLabel(prompt)
+        layout.addWidget(lbl)
+
+        self.input = QLineEdit()
+        self.input.returnPressed.connect(self.accept)
+        layout.addWidget(self.input)
+
+        btn_row = QHBoxLayout()
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.setStyleSheet("background: #f1f5f9; color: #475569;")
+        btn_cancel.clicked.connect(self.reject)
+        btn_ok = QPushButton("OK")
+        btn_ok.setStyleSheet("background: #059669; color: white;")
+        btn_ok.clicked.connect(self.accept)
+        btn_row.addWidget(btn_cancel)
+        btn_row.addWidget(btn_ok)
+        layout.addLayout(btn_row)
+
+    def get_text(self):
+        return self.input.text().strip()
 
 
 class TableSelectionView(QWidget):
@@ -68,7 +116,7 @@ class TableSelectionView(QWidget):
 
         title = QLabel("Table Management")
         title.setProperty("class", "table-title")
-        title.setStyleSheet("font-size: 18px;")
+        title.setStyleSheet("font-size: 18px; color: #1e293b;")
         header_inner.addWidget(title)
         header_inner.addSpacing(16)
 
@@ -84,13 +132,16 @@ class TableSelectionView(QWidget):
 
         def _hbtn(label, icon_n, hover_color):
             b = QPushButton(f"  {label}")
-            b.setIcon(qta.icon(icon_n, color='#94a3b8'))
+            b.setIcon(qta.icon(icon_n, color='#334155'))
             b.setMinimumHeight(28)
             b.setMaximumHeight(36)
             b.setToolTip(label)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setProperty("class", "table-action-btn")
             b.setStyleSheet(
+                "QPushButton { color: #1e293b; background: #f1f5f9; "
+                "border: 1.5px solid #e2e8f0; border-radius: 8px; "
+                "padding: 0 14px; font-size: 12px; font-weight: 700; }"
                 f"QPushButton:hover {{ background: {hover_color}; border-color: {hover_color}; color: white; }}"
             )
             return b
@@ -430,31 +481,35 @@ class TableSelectionView(QWidget):
         if not has_permission(self.parent_page.user, 'tables'):
             QMessageBox.warning(self, "Access Denied", "No permission.")
             return
-        t_no, ok = QInputDialog.getText(self, "Add Table", "Enter Table Number (e.g., T11):")
-        if ok and t_no:
-            success, msg = add_table(t_no.strip())
-            if success:
-                QMessageBox.information(self, "Success", msg)
-                self.load_tables()
-            else:
-                QMessageBox.warning(self, "Error", msg)
-
-    def delete_table_action(self):
-        if not has_permission(self.parent_page.user, 'tables'):
-            QMessageBox.warning(self, "Access Denied", "No permission.")
-            return
-        t_no, ok = QInputDialog.getText(self, "Delete Table", "Enter Table Number:")
-        if ok and t_no:
-            if QMessageBox.question(
-                self, "Confirm", f"Delete {t_no}?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            ) == QMessageBox.StandardButton.Yes:
-                success, msg = delete_table(t_no.strip())
+        dlg = _TextInputDialog("Add Table", "Enter Table Number (e.g., T11):", self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            t_no = dlg.get_text()
+            if t_no:
+                success, msg = add_table(t_no)
                 if success:
                     QMessageBox.information(self, "Success", msg)
                     self.load_tables()
                 else:
                     QMessageBox.warning(self, "Error", msg)
+
+    def delete_table_action(self):
+        if not has_permission(self.parent_page.user, 'tables'):
+            QMessageBox.warning(self, "Access Denied", "No permission.")
+            return
+        dlg = _TextInputDialog("Delete Table", "Enter Table Number:", self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            t_no = dlg.get_text()
+            if t_no:
+                if QMessageBox.question(
+                    self, "Confirm", f"Delete {t_no}?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                ) == QMessageBox.StandardButton.Yes:
+                    success, msg = delete_table(t_no)
+                    if success:
+                        QMessageBox.information(self, "Success", msg)
+                        self.load_tables()
+                    else:
+                        QMessageBox.warning(self, "Error", msg)
 
     def open_help_dialog(self):
         ShortcutsDialog(self).exec()

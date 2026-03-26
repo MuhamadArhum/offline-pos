@@ -10,8 +10,8 @@ from frontend.theme import Theme
 def main():
     # 1. Setup Application
     app = QApplication(sys.argv)
-    app.setApplicationName("Modern Restaurant POS")
-    app.setOrganizationName("YourCompany")
+    app.setApplicationName("Abyte POS")
+    app.setOrganizationName("Abyte")
 
     # 2. Load Configuration & Styles
     config = load_config()

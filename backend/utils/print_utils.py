@@ -39,6 +39,19 @@ def _get_real_printer_name(preferred_name=None):
             return info.printerName()
     return None
 
+_MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB
+
+def _rotate_log_if_needed():
+    """Rotate print log when it exceeds 5 MB."""
+    try:
+        if os.path.exists(PRINT_LOG_FILE) and os.path.getsize(PRINT_LOG_FILE) > _MAX_LOG_BYTES:
+            bak = PRINT_LOG_FILE.replace(".txt", ".bak.txt")
+            if os.path.exists(bak):
+                os.remove(bak)
+            os.rename(PRINT_LOG_FILE, bak)
+    except Exception:
+        pass
+
 def log_print_job(print_type, order_data, status="success", error_msg=""):
     """
     Log print job to file.
@@ -49,16 +62,17 @@ def log_print_job(print_type, order_data, status="success", error_msg=""):
     """
     try:
         os.makedirs("logs", exist_ok=True)
+        _rotate_log_if_needed()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         invoice_no = order_data.get("invoice_no", "N/A")
         table_no = order_data.get("table_no", "N/A")
         grand_total = order_data.get("grand_total", 0)
-        
+
         log_entry = f"[{timestamp}] {print_type.upper()} - Invoice: {invoice_no} | Table: {table_no} | Total: Rs {grand_total:,.2f} | Status: {status}"
         if error_msg:
             log_entry += f" | Error: {error_msg}"
         log_entry += "\n"
-        
+
         with open(PRINT_LOG_FILE, "a", encoding="utf-8") as f:
             f.write(log_entry)
     except Exception as e:
@@ -559,7 +573,7 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
 
         <!-- Footer -->
         <div class="footer-msg">{restaurant_info.get('footer', '*** THANK YOU! VISIT AGAIN ***')}</div>
-        <div class="footer-sub">Powered by POS System &bull; {datetime.now().strftime('%d-%m-%Y')}</div>
+        <div class="footer-sub">Powered by Abyte POS &bull; {datetime.now().strftime('%d-%m-%Y')}</div>
         <div class="barcode-placeholder">||||| {invoice_no} |||||</div>
 
         <br><br>

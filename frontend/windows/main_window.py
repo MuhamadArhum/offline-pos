@@ -12,7 +12,7 @@ class MainWindow(QMainWindow):
     def __init__(self, user=None):
         super().__init__()
         self.user = user
-        self.setWindowTitle(f"Modern POS System - {user['username'] if user else 'Guest'}")
+        self.setWindowTitle(f"Abyte POS - {user['username'] if user else 'Guest'}")
         self.resize(1280, 800)
         self.setMinimumSize(900, 600)
         
@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
         else:
             logo_icon.setPixmap(qta.icon('fa5s.utensils', color=Theme.PRIMARY).pixmap(22, 22))
 
-        logo_text = QLabel("POS SYSTEM")
+        logo_text = QLabel("ABYTE POS")
         logo_text.setStyleSheet(f"""
             font-size: 13px;
             font-weight: 800;

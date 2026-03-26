@@ -152,20 +152,20 @@ QPushButton[class="btn-kitchen-ready"]:hover  { background:#047857; }
 QPushButton[class="btn-kitchen-ready"]:pressed{ background:#065F46; }
 
 /* ─── TABLE SELECTION ───────────────────────────────────────────────────────── */
-QFrame[class="table-header-card"] { background:#0F172A; border-radius:14px; border:none; }
-QLabel[class="table-title"]       { font-size:20px; font-weight:900; color:#FFFFFF; letter-spacing:-0.5px; }
+QFrame[class="table-header-card"] { background:#FFFFFF; border-radius:14px; border:1.5px solid #E2E8F0; }
+QLabel[class="table-title"]       { font-size:20px; font-weight:900; color:#1E293B; letter-spacing:-0.5px; }
 QPushButton[class="table-notify-btn"] {
     background:#EF4444; color:white; border:none;
     border-radius:8px; font-weight:800; font-size:12px; padding:0 14px;
 }
 QPushButton[class="table-action-btn"] {
-    background:rgba(255,255,255,0.06); color:#94A3B8;
-    border:1px solid rgba(255,255,255,0.10);
-    border-radius:8px; font-size:11px; font-weight:600; padding:0 12px;
+    background:#F1F5F9; color:#1E293B;
+    border:1.5px solid #E2E8F0;
+    border-radius:8px; font-size:12px; font-weight:700; padding:0 12px;
 }
 QPushButton[class="table-action-btn"]:hover {
-    background:rgba(255,255,255,0.14); color:#FFFFFF;
-    border-color:rgba(255,255,255,0.25);
+    background:#E2E8F0; color:#0F172A;
+    border-color:#94A3B8;
 }
 QFrame[class="table-card"] { border-radius:14px; border:2px solid #E2E8F0; }
 QFrame[class="table-card"]:hover { border-width:3px; }
@@ -182,23 +182,23 @@ QPushButton[class="btn-takeaway"]:hover {
 
 /* ─── ORDER VIEW / BILLING ──────────────────────────────────────────────────── */
 QPushButton[class="btn-back"] {
-    background:rgba(255,255,255,0.08); color:#94A3B8;
-    border:1px solid rgba(255,255,255,0.12); border-radius:9px;
+    background:#F1F5F9; color:#475569;
+    border:1.5px solid #E2E8F0; border-radius:9px;
     font-weight:700; font-size:12px; padding:0 16px;
 }
 QPushButton[class="btn-back"]:hover {
-    background:rgba(255,255,255,0.16); color:#FFFFFF;
-    border-color:rgba(255,255,255,0.25);
+    background:#E2E8F0; color:#0F172A;
+    border-color:#94A3B8;
 }
 QLineEdit[class="menu-search"] {
-    border:none; border-radius:9px;
-    background:rgba(255,255,255,0.10);
-    padding:4px 14px; font-size:13px; color:#FFFFFF;
+    border:1.5px solid #E2E8F0; border-radius:9px;
+    background:#F1F5F9;
+    padding:4px 14px; font-size:13px; color:#1E293B;
     selection-background-color:#059669;
 }
 QLineEdit[class="menu-search"]:focus {
-    background:rgba(255,255,255,0.16);
-    border:1px solid rgba(5,150,105,0.6);
+    background:#FFFFFF;
+    border:1.5px solid #059669;
 }
 
 /* Category Buttons */

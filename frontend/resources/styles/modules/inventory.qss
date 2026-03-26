@@ -65,10 +65,11 @@ QLineEdit:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled {
 QComboBox::drop-down { border:none; width:28px; }
 QComboBox::down-arrow { border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #64748B; margin-right:10px; }
 QComboBox QAbstractItemView {
-    background:#FFFFFF; border:1.5px solid #E2E8F0; border-radius:10px;
-    selection-background-color:#ECFDF5; selection-color:#059669;
+    background:#FFFFFF; color:#0F172A; border:1.5px solid #E2E8F0; border-radius:10px;
+    selection-background-color:#ECFDF5; selection-color:#047857;
     padding:5px; outline:none;
 }
+QComboBox QAbstractItemView::item { color:#0F172A; padding:7px 12px; min-height:28px; }
 
 /* ─── CHECKBOX & RADIO ──────────────────────────────────────────────────────── */
 QCheckBox { font-size:13px; font-weight:500; color:#475569; spacing:10px; }

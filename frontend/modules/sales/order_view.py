@@ -9,10 +9,11 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QTableWidgetItem, QMessageBox,
     QInputDialog, QDialog,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPixmap
 import qtawesome as qta
 import os
+import threading
 from datetime import datetime
 
 from backend.core.config import get_setting
@@ -20,7 +21,7 @@ from backend.core.database import orders_col
 from backend.services.menu_service import get_menu
 from backend.services.inventory_service import deduct_stock
 from backend.services.recipe_service import get_recipe
-from backend.services.table_service import set_table_status
+from backend.services.table_service import set_table_status, get_all_tables
 from backend.services.shift_service import get_active_shift, update_shift_totals
 from backend.services.customer_service import (
     get_customer_by_phone, create_or_update_customer,
@@ -51,6 +52,7 @@ class OrderView(QWidget):
         self.service_percent  = 0.0
         self.current_customer = None
         self.redeemed_points  = 0
+        self._payment_in_progress = False
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -69,8 +71,8 @@ class OrderView(QWidget):
         top_bar_frame.setMaximumHeight(52)
         top_bar_frame.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #0f172a, stop:1 #1e293b);
+                background: white;
+                border: 1.5px solid #e2e8f0;
                 border-radius: 12px;
             }
         """)
@@ -93,7 +95,7 @@ class OrderView(QWidget):
                 pass
 
         btn_back = QPushButton("  Tables")
-        btn_back.setIcon(qta.icon('fa5s.arrow-left', color='#94a3b8'))
+        btn_back.setIcon(qta.icon('fa5s.arrow-left', color='#475569'))
         btn_back.setMinimumHeight(28)
         btn_back.setMaximumHeight(36)
         btn_back.setProperty("class", "btn-back")
@@ -106,18 +108,18 @@ class OrderView(QWidget):
         self.search_input.setMaximumHeight(36)
         self.search_input.setStyleSheet("""
             QLineEdit {
-                background: rgba(255,255,255,0.1);
-                border: 1px solid rgba(255,255,255,0.2);
+                background: #f1f5f9;
+                border: 1.5px solid #e2e8f0;
                 border-radius: 9px;
                 padding: 0 14px;
-                color: white;
+                color: #1e293b;
                 font-size: 13px;
             }
             QLineEdit:focus {
-                background: rgba(255,255,255,0.15);
-                border-color: rgba(99,102,241,0.8);
+                background: white;
+                border-color: #059669;
             }
-            QLineEdit::placeholder { color: rgba(255,255,255,0.4); }
+            QLineEdit::placeholder { color: #94a3b8; }
         """)
         self.search_input.textChanged.connect(self.filter_menu)
         top_bar.addWidget(self.search_input)
@@ -403,11 +405,11 @@ class OrderView(QWidget):
         act_row = QHBoxLayout()
         act_row.setSpacing(10)
 
-        btn_kot = QPushButton("  KOT")
-        btn_kot.setIcon(qta.icon("fa5s.paper-plane", color="white"))
-        btn_kot.setFixedHeight(46)
-        btn_kot.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_kot.setStyleSheet("""
+        self.btn_kot = QPushButton("  KOT")
+        self.btn_kot.setIcon(qta.icon("fa5s.paper-plane", color="white"))
+        self.btn_kot.setFixedHeight(46)
+        self.btn_kot.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_kot.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0ea5e9, stop:1 #38bdf8);
                 color: white; border: none; border-radius: 10px;
@@ -418,11 +420,11 @@ class OrderView(QWidget):
             }
         """)
 
-        btn_split = QPushButton("  Split")
-        btn_split.setIcon(qta.icon("fa5s.cut", color="white"))
-        btn_split.setFixedHeight(46)
-        btn_split.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_split.setStyleSheet("""
+        self.btn_split = QPushButton("  Split")
+        self.btn_split.setIcon(qta.icon("fa5s.cut", color="white"))
+        self.btn_split.setFixedHeight(46)
+        self.btn_split.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_split.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f97316, stop:1 #fb923c);
                 color: white; border: none; border-radius: 10px;
@@ -433,11 +435,26 @@ class OrderView(QWidget):
             }
         """)
 
-        btn_payment = QPushButton("  PAY / CHARGE")
-        btn_payment.setIcon(qta.icon('fa5s.cash-register', color='white'))
-        btn_payment.setFixedHeight(46)
-        btn_payment.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_payment.setStyleSheet("""
+        btn_transfer = QPushButton("  Transfer")
+        btn_transfer.setIcon(qta.icon("fa5s.exchange-alt", color="white"))
+        btn_transfer.setFixedHeight(46)
+        btn_transfer.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_transfer.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7c3aed, stop:1 #a78bfa);
+                color: white; border: none; border-radius: 10px;
+                font-weight: 800; font-size: 13px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6d28d9, stop:1 #7c3aed);
+            }
+        """)
+
+        self.btn_payment = QPushButton("  PAY / CHARGE")
+        self.btn_payment.setIcon(qta.icon('fa5s.cash-register', color='white'))
+        self.btn_payment.setFixedHeight(46)
+        self.btn_payment.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_payment.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #059669, stop:1 #10b981);
                 color: white; border: none; border-radius: 10px;
@@ -446,15 +463,20 @@ class OrderView(QWidget):
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #047857, stop:1 #059669);
             }
+            QPushButton:disabled {
+                background: #94a3b8;
+            }
         """)
 
-        btn_kot.clicked.connect(self.send_kot)
-        btn_split.clicked.connect(self.process_split_bill)
-        btn_payment.clicked.connect(self.process_payment)
+        self.btn_kot.clicked.connect(self.send_kot)
+        self.btn_split.clicked.connect(self.process_split_bill)
+        btn_transfer.clicked.connect(self.transfer_table)
+        self.btn_payment.clicked.connect(self.process_payment)
 
-        act_row.addWidget(btn_kot, stretch=1)
-        act_row.addWidget(btn_split, stretch=1)
-        act_row.addWidget(btn_payment, stretch=2)
+        act_row.addWidget(self.btn_kot, stretch=1)
+        act_row.addWidget(self.btn_split, stretch=1)
+        act_row.addWidget(btn_transfer, stretch=1)
+        act_row.addWidget(self.btn_payment, stretch=2)
 
         right_layout.addLayout(act_row)
         layout.addWidget(right_panel, stretch=4)
@@ -476,6 +498,8 @@ class OrderView(QWidget):
         self.cart_items = {}
         self.current_customer = None
         self.redeemed_points = 0
+        self._payment_in_progress = False
+        self.btn_payment.setEnabled(True)
 
         for sp in (self.spin_discount, self.spin_service, self.spin_tax, self.spin_delivery_amt):
             sp.blockSignals(True)
@@ -596,7 +620,7 @@ class OrderView(QWidget):
             if w:
                 w.setParent(None)
         search = self.search_input.text().lower()
-        row, col = 0, 0
+        row, col, count = 0, 0, 0
         for item in self.menu_items:
             if not item.get('available', True):
                 continue
@@ -606,9 +630,17 @@ class OrderView(QWidget):
                 continue
             self.menu_grid_layout.addWidget(self.create_item_card(item), row, col)
             col += 1
+            count += 1
             if col >= 5:
                 col = 0
                 row += 1
+        if count == 0:
+            empty_lbl = QLabel("No menu items found")
+            empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty_lbl.setStyleSheet(
+                "color: #94a3b8; font-size: 16px; padding: 60px; background: transparent;"
+            )
+            self.menu_grid_layout.addWidget(empty_lbl, 0, 0, 1, 5)
 
     def create_item_card(self, item):
         card = QFrame()
@@ -791,6 +823,9 @@ class OrderView(QWidget):
 
             b_minus.clicked.connect(lambda c, n=name: self.change_qty(n, -1))
             b_plus.clicked.connect(lambda c, n=name: self.change_qty(n, 1))
+            lbl_q.mouseDoubleClickEvent = lambda e, n=name, q=qty: self._edit_qty_direct(n, q)
+            lbl_q.setCursor(Qt.CursorShape.IBeamCursor)
+            lbl_q.setToolTip("Double-click to enter quantity")
 
             ql.addWidget(b_minus)
             ql.addWidget(lbl_q)
@@ -831,7 +866,7 @@ class OrderView(QWidget):
             btn_del.setFixedSize(28, 28)
             btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_del.setStyleSheet("background: transparent; border: 1.5px solid #e2e8f0; border-radius: 7px;")
-            btn_del.clicked.connect(lambda c, n=name: self.remove_item(n))
+            btn_del.clicked.connect(lambda c, n=name: self._confirm_remove_item(n))
 
             al.addWidget(btn_note)
             al.addWidget(btn_del)
@@ -890,7 +925,7 @@ class OrderView(QWidget):
             full_order = order_data
         if self.table_no:
             set_table_status(self.table_no, "Running")
-        print_kot(full_order)
+        threading.Thread(target=print_kot, args=(full_order,), daemon=True).start()
         QMessageBox.information(self, "KOT Sent", f"Order sent to Kitchen!\nTable: {self.table_no}")
         self.go_back()
 
@@ -1015,8 +1050,10 @@ class OrderView(QWidget):
     # -- Payment ---------------------------------------------------------------
 
     def process_payment(self):
-        if not self.cart_items:
+        if not self.cart_items or self._payment_in_progress:
             return
+        self._payment_in_progress = True
+        self.btn_payment.setEnabled(False)
         # Show payment dialog with totals based on no specific method yet
         dlg = PaymentDialog(self.get_totals()['grand_total'], self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
@@ -1027,6 +1064,9 @@ class OrderView(QWidget):
             amt = totals_final['grand_total']
             payments = [{"method": method, "amount": amt, "received": pd['received'], "change": pd['change']}]
             self.complete_order(method, payments, pd.get('send_whatsapp', False), totals_final)
+        else:
+            self._payment_in_progress = False
+            self.btn_payment.setEnabled(True)
 
     def complete_order(self, main_method, payments, send_whatsapp=False, totals=None):
         totals = totals or self.get_totals(payment_method=main_method)
@@ -1139,9 +1179,9 @@ class OrderView(QWidget):
         if bill_dlg.exec() == QDialog.DialogCode.Accepted and bill_dlg.bill_type:
             bill_order = dict(full_order)
             bill_order['bill_type'] = bill_dlg.bill_type
-            print_receipt(bill_order)
+            threading.Thread(target=print_receipt, args=(bill_order,), daemon=True).start()
         else:
-            print_receipt(full_order)
+            threading.Thread(target=print_receipt, args=(full_order,), daemon=True).start()
 
         if send_whatsapp:
             phone = self.cust_phone_input.text().strip()
@@ -1153,6 +1193,7 @@ class OrderView(QWidget):
                     QMessageBox.warning(self, "WhatsApp Error", f"Failed to send: {e}")
             else:
                 QMessageBox.warning(self, "WhatsApp Error", "No phone number provided!")
+        self._payment_in_progress = False
         QMessageBox.information(self, "Success", "Payment Recorded & Receipt Printed!")
         self.go_back()
 
@@ -1228,6 +1269,64 @@ class OrderView(QWidget):
         if ok:
             self.redeemed_points = amt
             self.update_totals_ui()
+
+    # -- Helper Actions --------------------------------------------------------
+
+    def _confirm_remove_item(self, item_name):
+        if QMessageBox.question(
+            self, "Remove Item",
+            f"Remove '{item_name}' from cart?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) == QMessageBox.StandardButton.Yes:
+            self.remove_item(item_name)
+
+    def _edit_qty_direct(self, item_name, current_qty):
+        new_qty, ok = QInputDialog.getInt(
+            self, "Edit Quantity",
+            f"Enter quantity for:\n{item_name}",
+            current_qty, 0, 999,
+        )
+        if ok:
+            if new_qty == 0:
+                self.remove_item(item_name)
+            else:
+                self.cart_items[item_name]['qty'] = new_qty
+                self.update_cart_ui()
+
+    def transfer_table(self):
+        if not self.table_no:
+            QMessageBox.information(self, "Transfer", "Table transfer is only available for Dine In orders.")
+            return
+        if not self.current_order_id:
+            QMessageBox.information(self, "Transfer", "No active order to transfer.")
+            return
+        all_tables = get_all_tables()
+        free_tables = [t['table_no'] for t in all_tables if t['status'] == 'Available' and t['table_no'] != self.table_no]
+        if not free_tables:
+            QMessageBox.warning(self, "Transfer", "No free tables available to transfer to.")
+            return
+        target, ok = QInputDialog.getItem(
+            self, "Transfer Table",
+            f"Transfer from {self.table_no} to:",
+            free_tables, 0, False,
+        )
+        if not ok or not target:
+            return
+        if QMessageBox.question(
+            self, "Confirm Transfer",
+            f"Transfer order from {self.table_no} to {target}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        orders_col.update_one({"_id": self.current_order_id}, {"$set": {"table_no": target, "updated_at": datetime.now()}})
+        set_table_status(self.table_no, "Free")
+        set_table_status(target, "Running")
+        old_table = self.table_no
+        self.table_no = target
+        cur = self.info_label.text()
+        self.info_label.setText(cur.replace(f"Table: {old_table}", f"Table: {target}"))
+        QMessageBox.information(self, "Transferred", f"Order moved from {old_table} to {target}.")
 
     # -- Resize ----------------------------------------------------------------
 

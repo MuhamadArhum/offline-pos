@@ -217,7 +217,7 @@ class KitchenDisplay(QWidget):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.load_orders)
-        self.timer.start(10000)
+        self.timer.start(30000)
         self.load_orders()
 
     def load_orders(self):
@@ -226,7 +226,7 @@ class KitchenDisplay(QWidget):
             if item.widget():
                 item.widget().deleteLater()
         orders = list(orders_col.find(
-            {"status": "Running", "kitchen_status": {"$ne": "Ready"}}
+            {"status": {"$in": ["Running", "Kitchen"]}, "kitchen_status": {"$ne": "Ready"}}
         ).sort("updated_at", 1))
         row, col = 0, 0
         for order in orders:

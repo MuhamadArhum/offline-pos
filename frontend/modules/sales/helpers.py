@@ -21,18 +21,17 @@ IMPROVED_STYLE = GLOBAL_STYLE + """
 
 /* ── TABLE MANAGEMENT HEADER CARD ───────────────────────────────────────── */
 QFrame[class="table-header-card"] {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #0f172a, stop:0.5 #1e293b, stop:1 #0f172a);
-    border: none;
+    background: white;
+    border: 1.5px solid #e2e8f0;
     border-radius: 14px;
     padding: 4px;
 }
 
 /* ── TABLE ACTION BUTTONS ───────────────────────────────────────────────── */
 QPushButton[class="table-action-btn"] {
-    background: rgba(255,255,255,0.06);
-    color: #94a3b8;
-    border: 1px solid rgba(255,255,255,0.10);
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #e2e8f0;
     border-radius: 8px;
     padding: 0 14px;
     font-size: 12px;
@@ -40,16 +39,16 @@ QPushButton[class="table-action-btn"] {
     letter-spacing: 0.2px;
 }
 QPushButton[class="table-action-btn"]:hover {
-    background: rgba(255,255,255,0.14);
-    color: white;
-    border-color: rgba(255,255,255,0.25);
+    background: #e2e8f0;
+    color: #1e293b;
+    border-color: #94a3b8;
 }
 
 /* ── TABLE TITLE ────────────────────────────────────────────────────────── */
 QLabel[class="table-title"] {
     font-size: 22px;
     font-weight: 800;
-    color: white;
+    color: #1e293b;
     letter-spacing: -0.5px;
 }
 
@@ -88,17 +87,17 @@ QPushButton[class="btn-takeaway"]:hover {
 
 /* ── BACK BUTTON ─────────────────────────────────────────────────────────── */
 QPushButton[class="btn-back"] {
-    background: rgba(255,255,255,0.08);
-    color: #94a3b8;
-    border: 1px solid rgba(255,255,255,0.12);
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #e2e8f0;
     border-radius: 9px;
     padding: 0 16px;
     font-size: 13px;
     font-weight: 700;
 }
 QPushButton[class="btn-back"]:hover {
-    background: rgba(255,255,255,0.15);
-    color: white;
+    background: #e2e8f0;
+    color: #1e293b;
 }
 
 /* ── MENU SEARCH ─────────────────────────────────────────────────────────── */
@@ -552,12 +551,18 @@ QComboBox:focus { border-color: #059669; }
 QComboBox::drop-down { border: none; width: 24px; }
 QComboBox QAbstractItemView {
     background: white;
+    color: #1e293b;
     border: 1.5px solid #e2e8f0;
     border-radius: 8px;
-    selection-background-color: #ede9fe;
-    selection-color: #059669;
+    selection-background-color: #dcfce7;
+    selection-color: #047857;
     font-size: 12px;
     padding: 4px;
+}
+QComboBox QAbstractItemView::item {
+    color: #1e293b;
+    padding: 6px 10px;
+    min-height: 28px;
 }
 
 /* ── LINE EDITS (generic) ────────────────────────────────────────────────── */
@@ -586,7 +591,11 @@ QDoubleSpinBox:focus, QSpinBox:focus { border-color: #059669; }
 /* ── DIALOG BASE ─────────────────────────────────────────────────────────── */
 QDialog {
     background: #f8fafc;
+    color: #1e293b;
     border-radius: 16px;
+}
+QDialog QLabel {
+    color: #1e293b;
 }
 
 /* ── MESSAGE BOX ─────────────────────────────────────────────────────────── */
