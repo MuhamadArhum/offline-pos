@@ -28,7 +28,7 @@ from backend.services.customer_service import (
     add_loyalty_points, deduct_loyalty_points, log_customer_order,
 )
 from backend.services.whatsapp_service import send_receipt_via_whatsapp
-from backend.utils.print_utils import print_receipt, print_kot
+from backend.utils.print_utils import print_receipt, print_kot, load_print_design
 
 from frontend.modules.sales.helpers import (
     IMPROVED_STYLE, _badge,
@@ -53,6 +53,7 @@ class OrderView(QWidget):
         self.current_customer = None
         self.redeemed_points  = 0
         self._payment_in_progress = False
+        self._kot_sent_items = {}   # name -> qty already sent to kitchen
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -538,6 +539,11 @@ class OrderView(QWidget):
                 self.load_existing_order(existing)
 
     def load_existing_order(self, order):
+        # Restore already-sent KOT items so delta is calculated correctly
+        self._kot_sent_items = {
+            item['name']: item['qty']
+            for item in order.get('kot_items', [])
+        }
         self.cart_items = {}
         for item in order.get('items', []):
             name = item['name']
@@ -880,7 +886,28 @@ class OrderView(QWidget):
     def send_kot(self):
         if not self.cart_items:
             return
-        items_list = [{
+
+        # ── Delta: sirf naye ya bade hue items ────────────────────────────────
+        new_items = []
+        for name, d in self.cart_items.items():
+            already_sent = self._kot_sent_items.get(name, 0)
+            extra_qty    = d['qty'] - already_sent
+            if extra_qty > 0:
+                new_items.append({
+                    "name": name, "qty": extra_qty, "price": d['price'],
+                    "total": extra_qty * d['price'],
+                    "category": d['obj'].get('category', ''),
+                    "note": d.get('note', ''), "id": str(d['obj'].get('_id', '')),
+                    "is_combo": d['obj'].get('is_combo', False),
+                    "combo_items": d['obj'].get('combo_items', []),
+                })
+
+        if not new_items:
+            QMessageBox.information(self, "KOT", "Koi naye items nahi hain.\nSab items pehle se kitchen mein ja chuke hain.")
+            return
+
+        # ── Full items list for order DB ───────────────────────────────────────
+        all_items = [{
             "name": n, "qty": d['qty'], "price": d['price'],
             "total": d['qty'] * d['price'],
             "category": d['obj'].get('category', ''),
@@ -888,10 +915,17 @@ class OrderView(QWidget):
             "is_combo": d['obj'].get('is_combo', False),
             "combo_items": d['obj'].get('combo_items', []),
         } for n, d in self.cart_items.items()]
+
+        # kot_items = current totals of everything sent so far (after this KOT)
+        updated_kot_sent = dict(self._kot_sent_items)
+        for item in new_items:
+            updated_kot_sent[item['name']] = updated_kot_sent.get(item['name'], 0) + item['qty']
+        kot_items_for_db = [{"name": n, "qty": q} for n, q in updated_kot_sent.items()]
+
         totals = self.get_totals()
         order_data = {
             "table_no": self.table_no, "order_type": self.combo_order_type.currentText(),
-            "items": items_list, "subtotal": totals['subtotal'],
+            "items": all_items, "subtotal": totals['subtotal'],
             "discount": totals['discount'], "discount_percent": self.discount_percent,
             "points_discount": totals.get('points_discount', 0),
             "service_charge": totals['service_charge'], "service_percent": self.service_percent,
@@ -904,7 +938,9 @@ class OrderView(QWidget):
             "kitchen_status": "Pending",
             "waiter": self.parent_page.user.get('username') if self.parent_page.user else "Admin",
             "updated_at": datetime.now(),
+            "kot_items": kot_items_for_db,
         }
+
         if self.current_order_id:
             orders_col.update_one({"_id": self.current_order_id}, {"$set": order_data})
             full_order = orders_col.find_one({"_id": self.current_order_id})
@@ -923,10 +959,28 @@ class OrderView(QWidget):
             res = orders_col.insert_one(order_data)
             self.current_order_id = res.inserted_id
             full_order = order_data
+
+        # ── Memory update ──────────────────────────────────────────────────────
+        self._kot_sent_items = updated_kot_sent
+
         if self.table_no:
             set_table_status(self.table_no, "Running")
-        threading.Thread(target=print_kot, args=(full_order,), daemon=True).start()
-        QMessageBox.information(self, "KOT Sent", f"Order sent to Kitchen!\nTable: {self.table_no}")
+
+        # ── Print only the NEW/delta items ─────────────────────────────────────
+        kot_order = dict(full_order)
+        kot_order['items'] = new_items   # sirf naye items kitchen jayenge
+
+        pd = load_print_design()
+        if pd.get("preview_before_print"):
+            from frontend.dialogs.print_preview_dialog import PrintPreviewDialog
+            dlg = PrintPreviewDialog(kot_order, mode="kot", parent=self)
+            dlg.exec()
+        else:
+            threading.Thread(target=print_kot, args=(kot_order,), daemon=True).start()
+
+        added_names = ", ".join(i['name'] for i in new_items)
+        QMessageBox.information(self, "KOT Sent",
+            f"Kitchen mein bhej diya!\nTable: {self.table_no}\nItems: {added_names}")
         self.go_back()
 
     # -- Split Bill ------------------------------------------------------------
@@ -1179,9 +1233,16 @@ class OrderView(QWidget):
         if bill_dlg.exec() == QDialog.DialogCode.Accepted and bill_dlg.bill_type:
             bill_order = dict(full_order)
             bill_order['bill_type'] = bill_dlg.bill_type
-            threading.Thread(target=print_receipt, args=(bill_order,), daemon=True).start()
         else:
-            threading.Thread(target=print_receipt, args=(full_order,), daemon=True).start()
+            bill_order = full_order
+
+        pd = load_print_design()
+        if pd.get("preview_before_print"):
+            from frontend.dialogs.print_preview_dialog import PrintPreviewDialog
+            dlg = PrintPreviewDialog(bill_order, mode="bill", parent=self)
+            dlg.exec()
+        else:
+            threading.Thread(target=print_receipt, args=(bill_order,), daemon=True).start()
 
         if send_whatsapp:
             phone = self.cust_phone_input.text().strip()

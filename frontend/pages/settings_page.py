@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame, 
-                             QLabel, QPushButton, QLineEdit, QComboBox, 
-                             QMessageBox, QTabWidget, QCheckBox, QGroupBox, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame,
+                             QLabel, QPushButton, QLineEdit, QComboBox,
+                             QMessageBox, QTabWidget, QCheckBox, QGroupBox,
                              QRadioButton, QFormLayout, QSpinBox, QDoubleSpinBox,
                              QFileDialog, QScrollArea, QButtonGroup, QInputDialog,
                              QListWidget, QListWidgetItem, QDialog, QAbstractItemView)
@@ -292,13 +292,15 @@ class SettingsPage(QWidget):
         # ── Tabs ──
         self.tabs = QTabWidget()
 
-        self.general_tab  = GeneralSettingsTab()
-        self.printer_tab  = PrinterSettingsTab()
-        self.database_tab = DatabaseSettingsTab()
+        self.general_tab     = GeneralSettingsTab()
+        self.printer_tab     = PrinterSettingsTab()
+        self.database_tab    = DatabaseSettingsTab()
+        self.print_design_tab = PrintDesignTab()
 
-        self.tabs.addTab(self.general_tab,  qta.icon('fa5s.cog', color=TEXT_SEC), "General")
-        self.tabs.addTab(self.printer_tab,  qta.icon('fa5s.print', color=TEXT_SEC), "Printers")
-        self.tabs.addTab(self.database_tab, qta.icon('fa5s.database', color=TEXT_SEC), "Database")
+        self.tabs.addTab(self.general_tab,      qta.icon('fa5s.cog',         color=TEXT_SEC), "General")
+        self.tabs.addTab(self.printer_tab,      qta.icon('fa5s.print',       color=TEXT_SEC), "Printers")
+        self.tabs.addTab(self.print_design_tab, qta.icon('fa5s.file-invoice',color=TEXT_SEC), "Print Design")
+        self.tabs.addTab(self.database_tab,     qta.icon('fa5s.database',    color=TEXT_SEC), "Database")
 
         layout.addWidget(self.tabs)
 
@@ -1319,3 +1321,312 @@ class CategoryDialog(QDialog):
             self.section_combo.setCurrentText(category.get('section', 'kitchen'))
             self.color_edit.setText(category.get('color', '#4F46E5'))
             self.printer_role_edit.setText(category.get('printer_role', ''))
+
+
+# ─── Print Design Tab ──────────────────────────────────────────────────────────
+
+class PrintDesignTab(QWidget):
+    """Settings tab for customising KOT and Bill print layouts."""
+
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet(f"background-color: {BG};")
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(f"background-color: {BG};")
+
+        content = QWidget()
+        content.setStyleSheet(f"background-color: {BG};")
+        self._layout = QVBoxLayout(content)
+        self._layout.setContentsMargins(28, 24, 28, 24)
+        self._layout.setSpacing(18)
+
+        self._build_bill_card()
+        self._build_kot_card()
+        self._build_misc_card()
+        self._layout.addStretch()
+
+        scroll.setWidget(content)
+        outer.addWidget(scroll, stretch=1)
+
+        # ── Save footer ──
+        footer = QFrame()
+        footer.setFixedHeight(64)
+        footer.setStyleSheet(f"QFrame {{ background-color: {SURFACE}; border-top: 1.5px solid {BORDER}; }}")
+        fl = QHBoxLayout(footer)
+        fl.setContentsMargins(28, 0, 28, 0)
+
+        btn_preview_both = make_ghost_btn("  Preview Both", icon=qta.icon('fa5s.eye', color=TEXT_SEC))
+        btn_preview_both.clicked.connect(self._open_preview_both)
+        fl.addWidget(btn_preview_both)
+        fl.addStretch()
+        btn_save = make_btn("  Save Design Settings", ACCENT,
+                            icon=qta.icon('fa5s.save', color='white'), height=42)
+        btn_save.setMinimumWidth(200)
+        btn_save.clicked.connect(self._save)
+        fl.addWidget(btn_save)
+        outer.addWidget(footer)
+
+        self._load()
+
+    # ── Cards ──────────────────────────────────────────────────────────────────
+
+    def _card(self):
+        f = QFrame()
+        f.setStyleSheet(f"""
+            QFrame {{
+                background-color: {SURFACE};
+                border: 1.5px solid {BORDER};
+                border-radius: 12px;
+            }}
+        """)
+        return f
+
+    def _row_lbl(self, text):
+        l = QLabel(text)
+        l.setStyleSheet(f"color: {TEXT_SEC}; font-weight: 600; font-size: 12px;")
+        return l
+
+    def _chk(self, text):
+        cb = QCheckBox(text)
+        cb.setStyleSheet(f"font-size: 13px; color: {TEXT_PRI};")
+        return cb
+
+    def _build_bill_card(self):
+        c = self._card()
+        lay = QVBoxLayout(c)
+        lay.setContentsMargins(20, 18, 20, 20)
+        lay.setSpacing(12)
+        lay.addLayout(card_title("Bill / Receipt Design", 'fa5s.file-invoice', ACCENT))
+        lay.addWidget(divider_line())
+
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self.bill_font_size = QSpinBox()
+        self.bill_font_size.setRange(8, 18)
+        self.bill_font_size.setValue(11)
+        self.bill_font_size.setSuffix(" px")
+
+        self.bill_paper_size = QComboBox()
+        self.bill_paper_size.addItems(["58mm", "80mm"])
+        self.bill_paper_size.setCurrentText("80mm")
+
+        self.bill_copy = QComboBox()
+        self.bill_copy.addItems(["(None)", "ORIGINAL", "DUPLICATE", "TRIPLICATE"])
+
+        self.bill_header_extra = QLineEdit()
+        self.bill_header_extra.setPlaceholderText("Extra header line (e.g. GST# 123456)")
+
+        self.bill_footer_extra = QLineEdit()
+        self.bill_footer_extra.setPlaceholderText("Extra footer line (e.g. WhatsApp: 0300-XXXXXXX)")
+
+        for lbl_text, widget in [
+            ("Font Size:", self.bill_font_size),
+            ("Paper Size:", self.bill_paper_size),
+            ("Bill Copy Label:", self.bill_copy),
+            ("Extra Header:", self.bill_header_extra),
+            ("Extra Footer:", self.bill_footer_extra),
+        ]:
+            form.addRow(self._row_lbl(lbl_text), widget)
+        lay.addLayout(form)
+        lay.addWidget(divider_line())
+
+        # Checkboxes grid
+        chk_lbl = QLabel("Show / Hide Fields:")
+        chk_lbl.setStyleSheet(f"font-size: 12px; font-weight: 700; color: {TEXT_PRI};")
+        lay.addWidget(chk_lbl)
+
+        self.bill_show_logo     = self._chk("Show Logo")
+        self.bill_show_token    = self._chk("Show Token Number")
+        self.bill_show_customer = self._chk("Show Customer Name")
+        self.bill_show_waiter   = self._chk("Show Waiter Name")
+        self.bill_show_tax      = self._chk("Show Tax / GST")
+        self.bill_show_service  = self._chk("Show Service Charge")
+        self.bill_show_discount = self._chk("Show Discount")
+
+        grid = QGridLayout()
+        grid.setSpacing(6)
+        chks = [
+            self.bill_show_logo, self.bill_show_token,
+            self.bill_show_customer, self.bill_show_waiter,
+            self.bill_show_tax, self.bill_show_service,
+            self.bill_show_discount,
+        ]
+        for i, chk in enumerate(chks):
+            grid.addWidget(chk, i // 2, i % 2)
+        lay.addLayout(grid)
+
+        self._layout.addWidget(c)
+
+    def _build_kot_card(self):
+        c = self._card()
+        lay = QVBoxLayout(c)
+        lay.setContentsMargins(20, 18, 20, 20)
+        lay.setSpacing(12)
+        lay.addLayout(card_title("KOT — Kitchen Order Ticket Design", 'fa5s.utensils', "#f97316"))
+        lay.addWidget(divider_line())
+
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self.kot_font_size = QSpinBox()
+        self.kot_font_size.setRange(10, 24)
+        self.kot_font_size.setValue(14)
+        self.kot_font_size.setSuffix(" px")
+
+        self.kot_title = QLineEdit()
+        self.kot_title.setPlaceholderText("e.g. KITCHEN ORDER TICKET")
+
+        for lbl_text, widget in [
+            ("Font Size:", self.kot_font_size),
+            ("KOT Title:", self.kot_title),
+        ]:
+            form.addRow(self._row_lbl(lbl_text), widget)
+        lay.addLayout(form)
+        lay.addWidget(divider_line())
+
+        chk_lbl = QLabel("Show / Hide Fields:")
+        chk_lbl.setStyleSheet(f"font-size: 12px; font-weight: 700; color: {TEXT_PRI};")
+        lay.addWidget(chk_lbl)
+
+        self.kot_show_table    = self._chk("Show Table Number")
+        self.kot_show_token    = self._chk("Show Token Number")
+        self.kot_show_type     = self._chk("Show Order Type Badge")
+        self.kot_show_waiter   = self._chk("Show Waiter Name")
+        self.kot_show_notes    = self._chk("Show Item Notes")
+        self.kot_show_cat_hdr  = self._chk("Show Category Headers")
+
+        grid = QGridLayout()
+        grid.setSpacing(6)
+        chks = [
+            self.kot_show_table, self.kot_show_token,
+            self.kot_show_type, self.kot_show_waiter,
+            self.kot_show_notes, self.kot_show_cat_hdr,
+        ]
+        for i, chk in enumerate(chks):
+            grid.addWidget(chk, i // 2, i % 2)
+        lay.addLayout(grid)
+
+        self._layout.addWidget(c)
+
+    def _build_misc_card(self):
+        c = self._card()
+        lay = QVBoxLayout(c)
+        lay.setContentsMargins(20, 18, 20, 20)
+        lay.setSpacing(12)
+        lay.addLayout(card_title("Print Behaviour", 'fa5s.cogs', TEXT_SEC))
+        lay.addWidget(divider_line())
+
+        self.chk_preview = self._chk(
+            "Show Print Preview before printing (KOT & Bill)"
+        )
+        lay.addWidget(self.chk_preview)
+        note = QLabel("When enabled, a preview window appears before every print job so you can confirm or cancel.")
+        note.setStyleSheet(f"font-size: 11px; color: {TEXT_SEC}; padding-left: 26px;")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+
+        self._layout.addWidget(c)
+
+    # ── Load / Save ────────────────────────────────────────────────────────────
+
+    def _load(self):
+        try:
+            config = load_config()
+            pd = config.get("print_design", {})
+            bill = pd.get("bill", {})
+            kot  = pd.get("kot", {})
+
+            self.bill_font_size.setValue(int(bill.get("font_size", 11)))
+            self.bill_paper_size.setCurrentText(bill.get("paper_size", "80mm"))
+            copy_val = bill.get("bill_copy", "")
+            self.bill_copy.setCurrentText(copy_val if copy_val else "(None)")
+            self.bill_header_extra.setText(bill.get("header_extra", ""))
+            self.bill_footer_extra.setText(bill.get("footer_extra", ""))
+            self.bill_show_logo.setChecked(bill.get("show_logo", True))
+            self.bill_show_token.setChecked(bill.get("show_token", True))
+            self.bill_show_customer.setChecked(bill.get("show_customer", True))
+            self.bill_show_waiter.setChecked(bill.get("show_waiter", True))
+            self.bill_show_tax.setChecked(bill.get("show_tax", True))
+            self.bill_show_service.setChecked(bill.get("show_service_charge", True))
+            self.bill_show_discount.setChecked(bill.get("show_discount", True))
+
+            self.kot_font_size.setValue(int(kot.get("font_size", 14)))
+            self.kot_title.setText(kot.get("kot_title", "KITCHEN ORDER TICKET"))
+            self.kot_show_table.setChecked(kot.get("show_table", True))
+            self.kot_show_token.setChecked(kot.get("show_token", True))
+            self.kot_show_type.setChecked(kot.get("show_order_type", True))
+            self.kot_show_waiter.setChecked(kot.get("show_waiter", True))
+            self.kot_show_notes.setChecked(kot.get("show_notes", True))
+            self.kot_show_cat_hdr.setChecked(kot.get("show_category_headers", True))
+
+            self.chk_preview.setChecked(pd.get("preview_before_print", False))
+        except Exception as e:
+            print(f"PrintDesignTab load error: {e}")
+
+    def _save(self):
+        try:
+            config = load_config()
+            copy_val = self.bill_copy.currentText()
+            if copy_val == "(None)":
+                copy_val = ""
+            config["print_design"] = {
+                "bill": {
+                    "font_size": self.bill_font_size.value(),
+                    "paper_size": self.bill_paper_size.currentText(),
+                    "bill_copy": copy_val,
+                    "header_extra": self.bill_header_extra.text().strip(),
+                    "footer_extra": self.bill_footer_extra.text().strip(),
+                    "show_logo": self.bill_show_logo.isChecked(),
+                    "show_token": self.bill_show_token.isChecked(),
+                    "show_customer": self.bill_show_customer.isChecked(),
+                    "show_waiter": self.bill_show_waiter.isChecked(),
+                    "show_tax": self.bill_show_tax.isChecked(),
+                    "show_service_charge": self.bill_show_service.isChecked(),
+                    "show_discount": self.bill_show_discount.isChecked(),
+                },
+                "kot": {
+                    "font_size": self.kot_font_size.value(),
+                    "kot_title": self.kot_title.text().strip() or "KITCHEN ORDER TICKET",
+                    "show_table": self.kot_show_table.isChecked(),
+                    "show_token": self.kot_show_token.isChecked(),
+                    "show_order_type": self.kot_show_type.isChecked(),
+                    "show_waiter": self.kot_show_waiter.isChecked(),
+                    "show_notes": self.kot_show_notes.isChecked(),
+                    "show_category_headers": self.kot_show_cat_hdr.isChecked(),
+                },
+                "preview_before_print": self.chk_preview.isChecked(),
+            }
+            save_config(config)
+            QMessageBox.information(self, "Saved", "Print design settings saved successfully!")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not save: {e}")
+
+    def _open_preview_both(self):
+        from frontend.dialogs.print_preview_dialog import PrintPreviewDialog
+        dummy = {
+            "invoice_no": "PREVIEW-001",
+            "token_no": "42",
+            "table_no": "Table 5",
+            "order_type": "Dine In",
+            "customer_name": "Test Customer",
+            "waiter": "Ahmed",
+            "items": [
+                {"name": "Zinger Burger", "qty": 2, "price": 450, "category": "Burgers", "note": "Extra spicy"},
+                {"name": "Classic Burger", "qty": 1, "price": 350, "category": "Burgers", "note": ""},
+                {"name": "Coke 500ml",    "qty": 3, "price": 120, "category": "Drinks",  "note": ""},
+                {"name": "Garlic Bread",  "qty": 1, "price": 180, "category": "Sides",   "note": ""},
+            ],
+            "subtotal": 1690, "discount": 100, "service_charge": 84,
+            "tax": 270, "grand_total": 1944, "created_at": __import__('datetime').datetime.now(),
+        }
+        dlg = PrintPreviewDialog(dummy, mode="both", parent=self)
+        dlg.exec()

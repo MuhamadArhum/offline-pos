@@ -9,6 +9,34 @@ from pathlib import Path
 from backend.core.config import load_config as load_printer_config, resolve_resource_path
 from backend.services.category_service import get_category_by_name
 
+# ─── Print Design Settings ─────────────────────────────────────────────────────
+
+_DEFAULT_BILL_DESIGN = {
+    "paper_size": "80mm", "font_size": 11,
+    "show_logo": True, "show_token": True, "show_customer": True,
+    "show_waiter": True, "show_tax": True, "show_service_charge": True,
+    "show_discount": True, "bill_copy": "ORIGINAL",
+    "header_extra": "", "footer_extra": "",
+}
+
+_DEFAULT_KOT_DESIGN = {
+    "font_size": 14, "kot_title": "KITCHEN ORDER TICKET",
+    "show_table": True, "show_token": True, "show_order_type": True,
+    "show_waiter": True, "show_notes": True, "show_category_headers": True,
+}
+
+def load_print_design():
+    """Load print_design settings from config with defaults."""
+    config = load_printer_config()
+    pd = config.get("print_design", {})
+    bill = {**_DEFAULT_BILL_DESIGN, **pd.get("bill", {})}
+    kot  = {**_DEFAULT_KOT_DESIGN,  **pd.get("kot",  {})}
+    return {
+        "bill": bill,
+        "kot":  kot,
+        "preview_before_print": pd.get("preview_before_print", False),
+    }
+
 # Print Log File Path
 PRINT_LOG_FILE = "logs/print_log.txt"
 
@@ -205,10 +233,115 @@ def generate_receipt_html(order_data, restaurant_info=None):
     """
     return html
 
-def generate_kot_html(order_data, restaurant_info=None):
+def generate_kot_html(order_data, restaurant_info=None, print_design=None):
+    if print_design is None:
+        print_design = load_print_design().get("kot", _DEFAULT_KOT_DESIGN)
+
+    kot_title   = print_design.get("kot_title", "KITCHEN ORDER TICKET")
+    fs          = int(print_design.get("font_size", 14))
+    show_table  = print_design.get("show_table", True)
+    show_token  = print_design.get("show_token", True)
+    show_type   = print_design.get("show_order_type", True)
+    show_waiter = print_design.get("show_waiter", True)
+    show_notes  = print_design.get("show_notes", True)
+    show_cat_hdr= print_design.get("show_category_headers", True)
+
+    date_val = order_data.get('updated_at') or order_data.get('created_at') or datetime.now()
+    date_str = date_val if isinstance(date_val, str) else date_val.strftime('%d-%m-%Y  %I:%M %p')
+
+    # Group items by category
+    items = order_data.get('items', [])
+    if show_cat_hdr:
+        from collections import OrderedDict
+        cat_map = OrderedDict()
+        for item in items:
+            cat = item.get('category', 'General') or 'General'
+            cat_map.setdefault(cat, []).append(item)
+    else:
+        cat_map = {"": items}
+
+    items_html = ""
+    for cat_name, cat_items in cat_map.items():
+        if show_cat_hdr and cat_name:
+            items_html += f"""
+            <tr>
+                <td colspan="2" style="
+                    background:#000; color:#fff;
+                    font-size:{fs-2}px; font-weight:900;
+                    letter-spacing:2px; padding:4px 6px;
+                    text-transform:uppercase;">
+                    &#9658; {cat_name.upper()}
+                </td>
+            </tr>"""
+        for item in cat_items:
+            note_html = ""
+            if show_notes and item.get('note'):
+                note_html = f'<tr><td colspan="2" style="font-size:{fs-4}px; color:#555; font-style:italic; padding:0 6px 4px 16px;">&#8627; {item["note"]}</td></tr>'
+            items_html += f"""
+            <tr>
+                <td style="font-size:{fs}px; font-weight:900; padding:6px 4px;">
+                    {item['name']}
+                </td>
+                <td style="font-size:{fs+4}px; font-weight:900; text-align:right;
+                           padding:6px 4px; white-space:nowrap;">
+                    x{item['qty']}
+                </td>
+            </tr>
+            {note_html}"""
+
+    table_html  = f'<p style="font-size:{fs+4}px; font-weight:900; margin:3px 0;">Table: {order_data.get("table_no", "Takeaway")}</p>' if show_table else ""
+    token_html  = f'<div style="border:2px solid #000; padding:4px 8px; margin:6px 0; display:table; width:100%;"><span style="font-size:{fs-2}px; color:#555;">TOKEN</span><span style="font-size:{fs+6}px; font-weight:900; float:right;">#{order_data.get("token_no","—")}</span></div>' if show_token else ""
+    type_val    = order_data.get('order_type', '')
+    type_html   = f'<p style="font-size:{fs-2}px; font-weight:700; border:1px solid #000; display:inline-block; padding:1px 8px; margin:2px 0;">{type_val.upper()}</p>' if show_type and type_val else ""
+    waiter_html = f'<p style="font-size:{fs-3}px; margin:2px 0;">Waiter: <b>{order_data.get("waiter","")}</b></p>' if show_waiter else ""
+
+    html = f"""
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+        * {{ margin:0; padding:0; box-sizing:border-box; }}
+        body {{ font-family:'Courier New', Courier, monospace; font-size:{fs-2}px;
+                color:#000; background:#fff; width:72mm; margin:0 auto; padding:4px 2px; }}
+        .center {{ text-align:center; }}
+        table {{ width:100%; border-collapse:collapse; }}
+        hr.solid {{ border:none; border-top:2px solid #000; margin:5px 0; }}
+        hr.dash  {{ border:none; border-top:1px dashed #000; margin:5px 0; }}
+    </style>
+    </head>
+    <body>
+        <div class="center" style="font-size:{fs+2}px; font-weight:900;
+             letter-spacing:1px; border-bottom:3px double #000; padding-bottom:4px; margin-bottom:4px;">
+            {kot_title}
+        </div>
+        <p style="font-size:{fs-3}px; margin:1px 0;">Order #: {order_data.get('invoice_no','New')}</p>
+        <p style="font-size:{fs-3}px; margin:1px 0;">Date: {date_str}</p>
+        {waiter_html}
+        {type_html}
+        <hr class="solid">
+        {table_html}
+        {token_html}
+        <hr class="dash">
+        <table>
+            <thead>
+                <tr>
+                    <th style="font-size:{fs-3}px; text-align:left; padding:2px 4px; border-bottom:1px solid #000;">ITEM</th>
+                    <th style="font-size:{fs-3}px; text-align:right; padding:2px 4px; border-bottom:1px solid #000;">QTY</th>
+                </tr>
+            </thead>
+            <tbody>{items_html}</tbody>
+        </table>
+        <hr class="solid">
+        <div class="center" style="font-size:{fs-2}px; font-weight:700; margin-top:4px;">
+            *** KITCHEN COPY ***
+        </div>
+        <br>
+    </body></html>
+    """
+    return html
+
+def _generate_kot_html_legacy(order_data, restaurant_info=None):
+    """Legacy: kept for backward compat reference only."""
     if not restaurant_info:
         restaurant_info = {"name": "KITCHEN ORDER TICKET", "address": "", "phone": ""}
-        
     items_html = ""
     for item in order_data.get('items', []):
         items_html += f"""
@@ -217,7 +350,6 @@ def generate_kot_html(order_data, restaurant_info=None):
             <td style="font-size: 14px; font-weight: bold;">{item['qty']}</td>
         </tr>
         """
-    
     date_val = order_data.get('updated_at') or order_data.get('created_at') or datetime.now()
     date_str = date_val if isinstance(date_val, str) else date_val.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -261,18 +393,32 @@ def generate_kot_html(order_data, restaurant_info=None):
 
 # ─── THERMAL INVOICE GENERATOR (80mm Professional) ────────────────────────────
 
-def generate_thermal_invoice_html(order_data, restaurant_info=None):
+def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design=None):
     """
     Generates a professional 80mm thermal printer invoice.
     Clean design optimized for 80mm (3 inch) thermal paper width.
-    Supports logo, itemized table, totals, and footer.
+    Supports logo, itemized table, totals, footer, and print_design settings.
     """
     if not restaurant_info:
         restaurant_info = get_restaurant_info()
+    if print_design is None:
+        print_design = load_print_design().get("bill", _DEFAULT_BILL_DESIGN)
+
+    fs            = int(print_design.get("font_size", 11))
+    show_logo     = print_design.get("show_logo", True)
+    show_token    = print_design.get("show_token", True)
+    show_customer = print_design.get("show_customer", True)
+    show_waiter   = print_design.get("show_waiter", True)
+    show_tax      = print_design.get("show_tax", True)
+    show_service  = print_design.get("show_service_charge", True)
+    show_discount = print_design.get("show_discount", True)
+    bill_copy     = print_design.get("bill_copy", "").strip()
+    header_extra  = print_design.get("header_extra", "").strip()
+    footer_extra  = print_design.get("footer_extra", "").strip()
 
     # Logo
     logo_html = ""
-    if restaurant_info.get("print_logo") and restaurant_info.get("logo_path"):
+    if show_logo and restaurant_info.get("print_logo") and restaurant_info.get("logo_path"):
         logo_path = resolve_resource_path(restaurant_info["logo_path"])
         if os.path.exists(logo_path):
             logo_uri = Path(logo_path).as_uri()
@@ -282,16 +428,16 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
     items_html = ""
     for item in order_data.get('items', []):
         note = item.get('note', '')
-        note_html = f'<div style="font-size:9px; color:#555; font-style:italic; padding-left:4px;">↳ {note}</div>' if note else ''
+        note_html = f'<div style="font-size:{fs-2}px; color:#555; font-style:italic; padding-left:4px;">&#8627; {note}</div>' if note else ''
         line_total = item['qty'] * item['price']
         items_html += f"""
         <tr>
-            <td style="padding:4px 2px; font-size:11px; vertical-align:top;">
+            <td style="padding:4px 2px; font-size:{fs}px; vertical-align:top;">
                 {item['name']}{note_html}
             </td>
-            <td style="padding:4px 2px; font-size:11px; text-align:center; vertical-align:top; white-space:nowrap;">{item['qty']}</td>
-            <td style="padding:4px 2px; font-size:11px; text-align:right; vertical-align:top; white-space:nowrap;">{item['price']:.0f}</td>
-            <td style="padding:4px 2px; font-size:11px; text-align:right; vertical-align:top; white-space:nowrap; font-weight:600;">{line_total:.0f}</td>
+            <td style="padding:4px 2px; font-size:{fs}px; text-align:center; vertical-align:top; white-space:nowrap;">{item['qty']}</td>
+            <td style="padding:4px 2px; font-size:{fs}px; text-align:right; vertical-align:top; white-space:nowrap;">{item['price']:.0f}</td>
+            <td style="padding:4px 2px; font-size:{fs}px; text-align:right; vertical-align:top; white-space:nowrap; font-weight:600;">{line_total:.0f}</td>
         </tr>
         """
 
@@ -304,6 +450,18 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
     customer   = order_data.get('customer_name', 'Guest')
     waiter     = order_data.get('waiter', '')
 
+    # Optional meta rows
+    customer_row = f'<tr><td class="meta-label">Customer</td><td class="meta-value">{customer}</td></tr>' if show_customer else ""
+    waiter_row_meta = f'<tr><td class="meta-label">Waiter</td><td class="meta-value">{waiter}</td></tr>' if show_waiter and waiter else ""
+    token_section = f"""
+        <div class="token-box">
+            <div class="token-label">TOKEN NO.</div>
+            <div class="token-value">#{token_no}</div>
+        </div>""" if show_token else ""
+    bill_copy_html = f'<div style="text-align:center; font-size:{fs}px; font-weight:800; letter-spacing:2px; border:1.5px solid #000; padding:2px 0; margin:4px 0;">{bill_copy} COPY</div>' if bill_copy else ""
+    header_extra_html = f'<div style="text-align:center; font-size:{fs-1}px; margin:2px 0;">{header_extra}</div>' if header_extra else ""
+    footer_extra_html = f'<div style="text-align:center; font-size:{fs-1}px; margin:2px 0;">{footer_extra}</div>' if footer_extra else ""
+
     # Totals
     subtotal     = order_data.get('subtotal', 0)
     discount     = order_data.get('discount', 0)
@@ -313,26 +471,24 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
 
     discount_row = f"""
         <tr>
-            <td colspan="2" style="font-size:11px; color:#c00; padding:2px 0;">Discount</td>
-            <td style="font-size:11px; color:#c00; text-align:right; padding:2px 0;">- Rs.{discount:.0f}</td>
+            <td colspan="2" style="font-size:{fs}px; color:#c00; padding:2px 0;">Discount</td>
+            <td style="font-size:{fs}px; color:#c00; text-align:right; padding:2px 0;">- Rs.{discount:.0f}</td>
         </tr>
-    """ if discount else ""
+    """ if (discount and show_discount) else ""
 
     service_row = f"""
         <tr>
-            <td colspan="2" style="font-size:11px; padding:2px 0;">Service Charge</td>
-            <td style="font-size:11px; text-align:right; padding:2px 0;">Rs.{service_chg:.0f}</td>
+            <td colspan="2" style="font-size:{fs}px; padding:2px 0;">Service Charge</td>
+            <td style="font-size:{fs}px; text-align:right; padding:2px 0;">Rs.{service_chg:.0f}</td>
         </tr>
-    """ if service_chg else ""
+    """ if (service_chg and show_service) else ""
 
     tax_row = f"""
         <tr>
             <td colspan="2" style="font-size:11px; padding:2px 0;">Tax / GST</td>
             <td style="font-size:11px; text-align:right; padding:2px 0;">Rs.{tax:.0f}</td>
         </tr>
-    """ if tax else ""
-
-    waiter_row = f'<p style="margin:1px 0; font-size:10px;">Waiter: {waiter}</p>' if waiter else ""
+    """ if (tax and show_tax) else ""
 
     html = f"""
     <!DOCTYPE html>
@@ -344,7 +500,7 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
+            font-size: {fs}px;
             color: #000;
             background: #fff;
             width: 72mm;
@@ -506,6 +662,9 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
         <!-- Invoice Badge -->
         <div class="invoice-label">&mdash;&mdash; INVOICE &mdash;&mdash;</div>
 
+        {header_extra_html}
+        {bill_copy_html}
+
         <!-- Order Meta -->
         <table class="meta-table">
             <tr>
@@ -520,18 +679,12 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
                 <td class="meta-label">Table</td>
                 <td class="meta-value">{table_no}</td>
             </tr>
-            <tr>
-                <td class="meta-label">Customer</td>
-                <td class="meta-value">{customer}</td>
-            </tr>
-            {'<tr><td class="meta-label">Waiter</td><td class="meta-value">' + waiter + '</td></tr>' if waiter else ''}
+            {customer_row}
+            {waiter_row_meta}
         </table>
 
         <!-- Token Highlight -->
-        <div class="token-box">
-            <div class="token-label">TOKEN NO.</div>
-            <div class="token-value">#{token_no}</div>
-        </div>
+        {token_section}
 
         <hr class="divider-solid">
 
@@ -555,8 +708,8 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
         <!-- Totals -->
         <table class="totals-table">
             <tr>
-                <td colspan="2" style="font-size:11px; padding:2px 0;">Subtotal</td>
-                <td style="font-size:11px; text-align:right; padding:2px 0;">Rs.{subtotal:.0f}</td>
+                <td colspan="2" style="font-size:{fs}px; padding:2px 0;">Subtotal</td>
+                <td style="font-size:{fs}px; text-align:right; padding:2px 0;">Rs.{subtotal:.0f}</td>
             </tr>
             {discount_row}
             {service_row}
@@ -573,6 +726,7 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None):
 
         <!-- Footer -->
         <div class="footer-msg">{restaurant_info.get('footer', '*** THANK YOU! VISIT AGAIN ***')}</div>
+        {footer_extra_html}
         <div class="footer-sub">Powered by Abyte POS &bull; {datetime.now().strftime('%d-%m-%Y')}</div>
         <div class="barcode-placeholder">||||| {invoice_no} |||||</div>
 
@@ -798,23 +952,22 @@ def print_network(order_data, config, is_kot=False, restaurant_info=None):
                 return
             
             p = Network(ip, port=port, timeout=PRINT_TIMEOUT)
-            if not restaurant_info:
-                restaurant_info = get_restaurant_info()
+            ri = restaurant_info if restaurant_info else get_restaurant_info()
             p.set(align='center')
-            if not is_kot and restaurant_info.get("print_logo") and restaurant_info.get("logo_path"):
+            if not is_kot and ri.get("print_logo") and ri.get("logo_path"):
                 try:
-                    logo_path = restaurant_info["logo_path"]
+                    logo_path = ri["logo_path"]
                     if os.path.exists(logo_path):
                         p.image(logo_path)
                 except Exception as e:
                     print(f"Logo print error: {e}")
             if is_kot:
-                p.text(f"{restaurant_info.get('name', 'KITCHEN ORDER TICKET')}\n\n")
+                p.text(f"{ri.get('name', 'KITCHEN ORDER TICKET')}\n\n")
                 p.text("KITCHEN COPY\n\n")
             else:
-                p.text(f"{restaurant_info.get('name', 'RESTAURANT NAME')}\n")
-                p.text(f"{restaurant_info.get('address', '')}\n")
-                p.text(f"Tel: {restaurant_info.get('phone', '')}\n\n")
+                p.text(f"{ri.get('name', 'RESTAURANT NAME')}\n")
+                p.text(f"{ri.get('address', '')}\n")
+                p.text(f"Tel: {ri.get('phone', '')}\n\n")
             p.set(align='left')
             p.text(f"Table: {order_data.get('table_no', 'Takeaway')}\n")
             p.text(f"Order: {order_data.get('invoice_no', 'New')}\n")
@@ -852,7 +1005,7 @@ def print_network(order_data, config, is_kot=False, restaurant_info=None):
                 p.text(f"TOTAL: {order_data.get('grand_total', 0):.2f}\n")
                 p.set(bold=False)
                 p.set(align='center')
-                p.text(f"\n{restaurant_info.get('footer', 'Thank You!')}\n")
+                p.text(f"\n{ri.get('footer', 'Thank You!')}\n")
             p.cut()
             p.close()
             result[0] = True
