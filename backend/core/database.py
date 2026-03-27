@@ -61,3 +61,52 @@ loyalty_transactions_col = db["loyalty_transactions"]
 # Collections - Phase 4 (Analytics)
 daily_analytics_col = db["daily_analytics"]
 item_analytics_col = db["item_analytics"]
+
+# ── Indexes — ensure fast queries ────────────────────────────────────────────
+def _ensure_indexes():
+    """Create indexes for frequently queried fields. Safe to call on every startup."""
+    try:
+        # Orders — most queried collection
+        orders_col.create_index([("created_at", -1)])
+        orders_col.create_index([("status", 1)])
+        orders_col.create_index([("order_type", 1)])
+        orders_col.create_index([("invoice_no", 1)], unique=True)
+        orders_col.create_index([("delivery_status", 1)], sparse=True)
+
+        # Inventory
+        inventory_col.create_index([("item_name", 1)])
+        inventory_col.create_index([("category", 1)])
+        inventory_col.create_index([("qty", 1)])
+
+        # Stock logs
+        stock_logs_col.create_index([("item_name", 1)])
+        stock_logs_col.create_index([("timestamp", -1)])
+
+        # Users
+        users_col.create_index([("username", 1)], unique=True)
+        users_col.create_index([("role", 1)])
+
+        # Menu items
+        menu_col.create_index([("name", 1)])
+        menu_col.create_index([("category", 1)])
+        menu_col.create_index([("available", 1)])
+
+        # Shifts
+        shifts_col.create_index([("opened_at", -1)])
+        shifts_col.create_index([("status", 1)])
+
+        # Wastage
+        wastage_col.create_index([("recorded_at", -1)])
+        wastage_col.create_index([("item_name", 1)])
+
+        # Audit logs
+        audit_logs_col.create_index([("timestamp", -1)])
+        audit_logs_col.create_index([("user", 1)])
+
+        # Customers
+        customers_col.create_index([("phone", 1)], sparse=True)
+
+    except Exception as _idx_err:
+        print(f"[DB] Index setup warning: {_idx_err}")
+
+_ensure_indexes()

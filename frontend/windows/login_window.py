@@ -16,6 +16,8 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QPixmap, QColor
 import qtawesome as qta
 from datetime import datetime
+from PyQt6.QtCore import QSettings
+from backend.services.user_service import AccountLockedError, AccountInactiveError, InvalidCredentialsError
 
 from backend.core.database import users_col
 from backend.services.user_service import authenticate_user
@@ -34,12 +36,11 @@ class LoginWorker(QThread):
     def run(self):
         try:
             user = authenticate_user(self.username, self.password)
-            if user:
-                self.finished.emit(user)
-            else:
-                self.error.emit("Invalid username or password")
-        except Exception as e:
-            self.error.emit(f"Connection error. Please try again.")
+            self.finished.emit(user)
+        except (AccountLockedError, AccountInactiveError, InvalidCredentialsError) as e:
+            self.error.emit(str(e))
+        except Exception:
+            self.error.emit("Connection error. Check if the database is running.")
 
 
 class LoginWindow(QWidget):
@@ -356,7 +357,15 @@ class LoginWindow(QWidget):
         main_layout.addWidget(container)
         main_layout.addStretch()
 
-        self.user_input.setFocus()
+        # Restore remembered username
+        _s = QSettings("AbytePos", "Login")
+        remembered = _s.value("remembered_username", "")
+        if remembered:
+            self.user_input.setText(remembered)
+            self.remember_chk.setChecked(True)
+            self.pass_input.setFocus()
+        else:
+            self.user_input.setFocus()
 
     def _load_stylesheet(self):
         """Load the enhanced login stylesheet"""
@@ -637,6 +646,11 @@ class LoginWindow(QWidget):
 
     def _complete_login(self, user):
         """Complete login and emit signal"""
+        _s = QSettings("AbytePos", "Login")
+        if self.remember_chk.isChecked():
+            _s.setValue("remembered_username", self.user_input.text().strip())
+        else:
+            _s.remove("remembered_username")
         self.login_success.emit(user)
         self.close()
 

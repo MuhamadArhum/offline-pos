@@ -71,31 +71,50 @@ DEFAULT_CONFIG = {
     "whatsapp_api_token": os.environ.get("WHATSAPP_API_TOKEN", "")
 }
 
+CONFIG_VERSION = 1
+
+def _validate_config(config: dict) -> dict:
+    """Clamp numeric fields to sane ranges to prevent invalid states."""
+    try:
+        config["tax_rate"] = max(0.0, min(100.0, float(config.get("tax_rate", 0))))
+        config["service_charge"] = max(0.0, min(100.0, float(config.get("service_charge", 0))))
+        config["delivery_charge"] = max(0.0, float(config.get("delivery_charge", 0)))
+    except (TypeError, ValueError):
+        pass
+    # Ensure category_charges sub-keys exist
+    for cat in ("Dine In", "Takeaway", "Delivery"):
+        if cat not in config.get("category_charges", {}):
+            config.setdefault("category_charges", {})[cat] = {"tax_rate": 0.0, "service_charge": 0.0}
+    return config
+
 def load_config():
-    """
-    Load configuration from config.json or return defaults.
-    """
+    """Load configuration from config.json, merge with defaults, and validate."""
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "r") as f:
                 config = json.load(f)
-                # Merge with defaults to ensure all keys exist
-                return {**DEFAULT_CONFIG, **config}
+            merged = {**DEFAULT_CONFIG, **config}
+            return _validate_config(merged)
+        except json.JSONDecodeError as e:
+            print(f"[Config] JSON parse error ({e}). Using defaults.")
+            return DEFAULT_CONFIG
         except Exception as e:
-            print(f"Error loading config: {e}")
+            print(f"[Config] Load error ({e}). Using defaults.")
             return DEFAULT_CONFIG
     return DEFAULT_CONFIG
 
-def save_config(config):
-    """
-    Save configuration to config.json.
-    """
+def save_config(config: dict) -> bool:
+    """Validate then save configuration to config.json."""
     try:
+        safe = _validate_config(dict(config))
+        # Never persist .env credentials back to config.json
+        safe.pop("whatsapp_instance_id", None)
+        safe.pop("whatsapp_api_token", None)
         with open(CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=4)
+            json.dump(safe, f, indent=4)
         return True
     except Exception as e:
-        print(f"Error saving config: {e}")
+        print(f"[Config] Save error: {e}")
         return False
 
 def get_setting(key, default=None):

@@ -9,6 +9,7 @@ from datetime import datetime
 from backend.services.rider_service import get_riders, assign_rider_to_order, update_delivery_status, get_delivery_orders
 from frontend.theme import Theme
 from frontend.shared_ui import GLOBAL_STYLE, C, page_header, make_ghost_btn
+from frontend.dialogs.print_preview_dialog import PrintPreviewDialog
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  DESIGN TOKENS
@@ -610,7 +611,21 @@ class DeliveryPage(QWidget):
             f"font-size:15px; font-weight:900; color:{_SUCCESS_MD};"
             f" border:none; background:transparent;"
         )
-        top_row.addWidget(inv_lbl); top_row.addWidget(time_lbl); top_row.addStretch(); top_row.addWidget(amt_lbl)
+
+        # Print Bill icon button
+        btn_print = QPushButton()
+        btn_print.setIcon(qta.icon('fa5s.print', color=_TEXT_SEC))
+        btn_print.setFixedSize(28, 28)
+        btn_print.setToolTip("Print Bill")
+        btn_print.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_print.setStyleSheet(
+            f"QPushButton {{ background:transparent; border:1px solid {_BORDER}; border-radius:6px; }}"
+            f"QPushButton:hover {{ background:{_BG}; border-color:{_PRIMARY}; }}"
+        )
+        btn_print.clicked.connect(lambda ch, o=order: self.print_bill(o))
+
+        top_row.addWidget(inv_lbl); top_row.addWidget(time_lbl); top_row.addStretch()
+        top_row.addWidget(amt_lbl); top_row.addWidget(btn_print)
         bl.addLayout(top_row)
 
         # ── Thin divider ─────────────────────────────────────────────────
@@ -739,6 +754,13 @@ class DeliveryPage(QWidget):
         dlg = AssignRiderDialog(order, self)
         if dlg.exec():
             self.load_data()
+
+    def print_bill(self, order):
+        # Convert ObjectId fields to strings for the print dialog
+        order_data = {k: (str(v) if hasattr(v, '__class__') and v.__class__.__name__ == 'ObjectId' else v)
+                      for k, v in order.items()}
+        dlg = PrintPreviewDialog(order_data, mode="bill", parent=self)
+        dlg.exec()
 
     def update_status(self, order_id, status):
         if status == "Cancelled":
