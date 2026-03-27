@@ -160,8 +160,8 @@ def generate_receipt_html(order_data, restaurant_info=None):
         note_html = f'<br><i style="font-size:10px;">({note})</i>' if note else ''
         items_html += f"""
         <tr>
-            <td>{item['qty']}</td>
             <td>{item['name']}{note_html}</td>
+            <td>{item['qty']}</td>
             <td style="text-align: right;">{item['price']:.2f}</td>
             <td style="text-align: right;">{item['qty'] * item['price']:.2f}</td>
         </tr>

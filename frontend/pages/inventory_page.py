@@ -113,6 +113,7 @@ QTableWidget::item {{
     padding: 8px 12px;
     border: none;
     border-bottom: 1px solid {_DIVIDER};
+    color: {_TEXT_PRI};
 }}
 QTableWidget::item:selected {{
     background: {_PRIMARY_LT};
@@ -1535,6 +1536,7 @@ class InventoryPage(QWidget):
             # Name
             name_item = QTableWidgetItem(item.get('item_name', ''))
             name_item.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+            name_item.setForeground(QColor(_TEXT_PRI))
             name_item.setBackground(QColor(row_color)); self.table.setItem(row, 0, name_item)
 
             # Category
@@ -1550,12 +1552,12 @@ class InventoryPage(QWidget):
 
             # Unit
             unit_item = QTableWidgetItem(item.get('unit', 'pcs'))
-            unit_item.setForeground(QColor(C['text_hint'])); unit_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            unit_item.setForeground(QColor(_TEXT_SEC)); unit_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             unit_item.setBackground(QColor(row_color)); self.table.setItem(row, 3, unit_item)
 
             # Cost
             cost_item = QTableWidgetItem(f"Rs {cost:.2f}" if cost else "—")
-            cost_item.setForeground(QColor(C['text_sec']))
+            cost_item.setForeground(QColor(_TEXT_SEC))
             cost_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             cost_item.setBackground(QColor(row_color)); self.table.setItem(row, 4, cost_item)
 
@@ -1569,7 +1571,7 @@ class InventoryPage(QWidget):
 
             # Threshold
             th_item = QTableWidgetItem(str(thresh))
-            th_item.setForeground(QColor(C['text_hint'])); th_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            th_item.setForeground(QColor(_TEXT_SEC)); th_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             th_item.setBackground(QColor(row_color)); self.table.setItem(row, 6, th_item)
 
             # Actions cell
