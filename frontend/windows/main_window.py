@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLabel, QFrame, QStackedWidget,
                              QLineEdit, QApplication, QSizeGrip, QGraphicsDropShadowEffect,
-                             QDialog, QComboBox, QMessageBox)
+                             QDialog, QMessageBox)
 from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QIcon, QColor, QFont, QPixmap, QKeySequence, QShortcut
 import qtawesome as qta
@@ -66,14 +66,13 @@ class MainWindow(QMainWindow):
         sc.activated.connect(self.quick_bill_shortcut)
 
     def quick_bill_shortcut(self):
-        """F2: Table number aur payment method le kar bill process karo."""
+        """F2: Table number le kar UNPAID bill print karo (payment process nahi hoti)."""
         from backend.core.database import orders_col
         from backend.utils.print_utils import print_receipt
-        from backend.services.table_service import set_table_status
 
         dlg = QDialog(self)
-        dlg.setWindowTitle("Quick Bill  —  F2")
-        dlg.setFixedSize(340, 210)
+        dlg.setWindowTitle("Print Bill  —  F2")
+        dlg.setFixedSize(340, 160)
         dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
 
         layout = QVBoxLayout(dlg)
@@ -86,17 +85,11 @@ class MainWindow(QMainWindow):
         tbl_input.setFixedHeight(36)
         layout.addWidget(tbl_input)
 
-        layout.addWidget(QLabel("<b>Payment Method:</b>"))
-        pay_combo = QComboBox()
-        pay_combo.addItems(["Cash", "Card", "Online"])
-        pay_combo.setFixedHeight(36)
-        layout.addWidget(pay_combo)
-
         btn_row = QHBoxLayout()
-        btn_ok = QPushButton("Process Bill")
+        btn_ok = QPushButton("Print Bill (UNPAID)")
         btn_ok.setFixedHeight(38)
         btn_ok.setStyleSheet(
-            "background:#059669;color:white;border:none;border-radius:8px;font-weight:700;font-size:13px;"
+            "background:#D97706;color:white;border:none;border-radius:8px;font-weight:700;font-size:13px;"
         )
         btn_cancel = QPushButton("Cancel")
         btn_cancel.setFixedHeight(38)
@@ -113,9 +106,7 @@ class MainWindow(QMainWindow):
             if not raw:
                 QMessageBox.warning(dlg, "Error", "Table number daalo.")
                 return
-            # Case insensitive: T1, t1, T01 sab same
             table_no = raw.upper()
-            method = pay_combo.currentText()
 
             order = orders_col.find_one({
                 "table_no": table_no,
@@ -126,22 +117,13 @@ class MainWindow(QMainWindow):
                     f"Table {table_no} par koi running order nahi mila.")
                 return
 
-            # Mark completed
-            from datetime import datetime
-            orders_col.update_one(
-                {"_id": order["_id"]},
-                {"$set": {
-                    "status": "Completed",
-                    "payment_method": method,
-                    "completed_at": datetime.now(),
-                    "updated_at": datetime.now(),
-                }}
-            )
-            set_table_status(table_no, "Free")
-            updated_order = orders_col.find_one({"_id": order["_id"]})
-            print_receipt(updated_order)
-            QMessageBox.information(dlg, "Done",
-                f"Table {table_no} — Bill ({method}) process ho gaya!")
+            # Print bill with UNPAID status — order DB mein change nahi hota
+            bill_order = dict(order)
+            bill_order['payment_status'] = 'UNPAID'
+            import threading
+            threading.Thread(target=print_receipt, args=(bill_order,), daemon=True).start()
+            QMessageBox.information(dlg, "Printed",
+                f"Table {table_no} — UNPAID bill print ho gaya!\nPayment k liye Sales page use karein.")
             dlg.accept()
 
         btn_ok.clicked.connect(process)

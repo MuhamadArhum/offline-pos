@@ -1236,6 +1236,8 @@ class OrderView(QWidget):
         else:
             bill_order = full_order
 
+        bill_order['payment_status'] = 'PAID'
+
         pd = load_print_design()
         if pd.get("preview_before_print"):
             from frontend.dialogs.print_preview_dialog import PrintPreviewDialog

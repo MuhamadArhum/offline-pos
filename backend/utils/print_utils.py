@@ -179,6 +179,22 @@ def generate_receipt_html(order_data, restaurant_info=None):
         f'{bill_type.upper()} BILL</p>'
     ) if bill_type else ''
 
+    payment_status = order_data.get('payment_status', '')
+    if payment_status == 'UNPAID':
+        pay_status_html = (
+            '<p class="center" style="font-size:16px; font-weight:900; '
+            'border:2px solid #c00; color:#c00; padding:4px 0; margin:6px 0; '
+            'letter-spacing:2px;">&#10007; UNPAID &#10007;</p>'
+        )
+    elif payment_status == 'PAID':
+        pay_status_html = (
+            '<p class="center" style="font-size:16px; font-weight:900; '
+            'border:2px solid #059669; color:#059669; padding:4px 0; margin:6px 0; '
+            'letter-spacing:2px;">&#10003; PAID &#10003;</p>'
+        )
+    else:
+        pay_status_html = ''
+
     html = f"""
     <html>
     <head>
@@ -200,6 +216,7 @@ def generate_receipt_html(order_data, restaurant_info=None):
         <p class="center">{restaurant_info['address']}</p>
         <p class="center">Tel: {restaurant_info['phone']}</p>
         <br>
+        {pay_status_html}
         <p class="center">{bill_type_html}</p>
         <p>Order #: {invoice_no}</p>
         <p style="font-size: 14px; font-weight: bold;">Token #: {token_no}</p>
@@ -450,6 +467,23 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
     customer   = order_data.get('customer_name', 'Guest')
     waiter     = order_data.get('waiter', '')
 
+    # Payment status badge
+    pay_status = order_data.get('payment_status', '')
+    if pay_status == 'UNPAID':
+        pay_status_html = (
+            f'<div style="text-align:center; font-size:{fs+2}px; font-weight:900; '
+            f'border:2px solid #c00; color:#c00; padding:3px 0; margin:5px 0; '
+            f'letter-spacing:2px;">&#10007; UNPAID &#10007;</div>'
+        )
+    elif pay_status == 'PAID':
+        pay_status_html = (
+            f'<div style="text-align:center; font-size:{fs+2}px; font-weight:900; '
+            f'border:2px solid #059669; color:#059669; padding:3px 0; margin:5px 0; '
+            f'letter-spacing:2px;">&#10003; PAID &#10003;</div>'
+        )
+    else:
+        pay_status_html = ''
+
     # Optional meta rows
     customer_row = f'<tr><td class="meta-label">Customer</td><td class="meta-value">{customer}</td></tr>' if show_customer else ""
     waiter_row_meta = f'<tr><td class="meta-label">Waiter</td><td class="meta-value">{waiter}</td></tr>' if show_waiter and waiter else ""
@@ -664,6 +698,7 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
 
         {header_extra_html}
         {bill_copy_html}
+        {pay_status_html}
 
         <!-- Order Meta -->
         <table class="meta-table">
