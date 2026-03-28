@@ -445,16 +445,14 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
     items_html = ""
     for item in order_data.get('items', []):
         note = item.get('note', '')
-        note_html = f'<div style="font-size:{fs-2}px; color:#555; font-style:italic; padding-left:4px;">&#8627; {note}</div>' if note else ''
+        note_html = f'<div class="item-note">&#8627; {note}</div>' if note else ''
         line_total = item['qty'] * item['price']
         items_html += f"""
         <tr>
-            <td style="padding:4px 2px; font-size:{fs}px; vertical-align:top;">
-                {item['name']}{note_html}
-            </td>
-            <td style="padding:4px 2px; font-size:{fs}px; text-align:center; vertical-align:top; white-space:nowrap;">{item['qty']}</td>
-            <td style="padding:4px 2px; font-size:{fs}px; text-align:right; vertical-align:top; white-space:nowrap;">{item['price']:.0f}</td>
-            <td style="padding:4px 2px; font-size:{fs}px; text-align:right; vertical-align:top; white-space:nowrap; font-weight:600;">{line_total:.0f}</td>
+            <td class="td-name">{item['name']}{note_html}</td>
+            <td class="td-qty">{item['qty']}</td>
+            <td class="td-rate">{item['price']:.0f}</td>
+            <td class="td-amt">{line_total:.0f}</td>
         </tr>
         """
 
@@ -467,22 +465,8 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
     customer   = order_data.get('customer_name', 'Guest')
     waiter     = order_data.get('waiter', '')
 
-    # Payment status badge
+    # Payment status (used inline in template)
     pay_status = order_data.get('payment_status', '')
-    if pay_status == 'UNPAID':
-        pay_status_html = (
-            f'<div style="text-align:center; font-size:{fs+2}px; font-weight:900; '
-            f'border:2px solid #c00; color:#c00; padding:3px 0; margin:5px 0; '
-            f'letter-spacing:2px;">&#10007; UNPAID &#10007;</div>'
-        )
-    elif pay_status == 'PAID':
-        pay_status_html = (
-            f'<div style="text-align:center; font-size:{fs+2}px; font-weight:900; '
-            f'border:2px solid #059669; color:#059669; padding:3px 0; margin:5px 0; '
-            f'letter-spacing:2px;">&#10003; PAID &#10003;</div>'
-        )
-    else:
-        pay_status_html = ''
 
     # Optional meta rows
     customer_row = f'<tr><td class="meta-label">Customer</td><td class="meta-value">{customer}</td></tr>' if show_customer else ""
@@ -503,26 +487,36 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
     tax          = order_data.get('tax', 0)
     grand_total  = order_data.get('grand_total', 0)
 
+    order_type   = order_data.get('order_type', 'Dine In')
+    pay_method   = order_data.get('payment_method', '')
+
     discount_row = f"""
         <tr>
-            <td colspan="2" style="font-size:{fs}px; color:#c00; padding:2px 0;">Discount</td>
-            <td style="font-size:{fs}px; color:#c00; text-align:right; padding:2px 0;">- Rs.{discount:.0f}</td>
+            <td colspan="2" class="tot-label" style="color:#b91c1c;">Discount</td>
+            <td class="tot-value" style="color:#b91c1c;">- Rs.{discount:.0f}</td>
         </tr>
     """ if (discount and show_discount) else ""
 
     service_row = f"""
         <tr>
-            <td colspan="2" style="font-size:{fs}px; padding:2px 0;">Service Charge</td>
-            <td style="font-size:{fs}px; text-align:right; padding:2px 0;">Rs.{service_chg:.0f}</td>
+            <td colspan="2" class="tot-label">Service Charge</td>
+            <td class="tot-value">Rs.{service_chg:.0f}</td>
         </tr>
     """ if (service_chg and show_service) else ""
 
     tax_row = f"""
         <tr>
-            <td colspan="2" style="font-size:11px; padding:2px 0;">Tax / GST</td>
-            <td style="font-size:11px; text-align:right; padding:2px 0;">Rs.{tax:.0f}</td>
+            <td colspan="2" class="tot-label">Tax / GST</td>
+            <td class="tot-value">Rs.{tax:.0f}</td>
         </tr>
     """ if (tax and show_tax) else ""
+
+    pay_method_row = f"""
+        <tr>
+            <td colspan="2" class="tot-label" style="font-weight:700;">Payment</td>
+            <td class="tot-value" style="font-weight:700;">{pay_method}</td>
+        </tr>
+    """ if pay_method and pay_method not in ('Pending', '') else ""
 
     html = f"""
     <!DOCTYPE html>
@@ -530,207 +524,327 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
     <head>
     <meta charset="UTF-8">
     <style>
-        /* 80mm thermal = approx 302px usable width */
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        * {{ margin:0; padding:0; box-sizing:border-box; }}
+
         body {{
             font-family: 'Courier New', Courier, monospace;
             font-size: {fs}px;
-            color: #000;
+            color: #111;
             background: #fff;
-            width: 72mm;
+            width: 76mm;
             margin: 0 auto;
-            padding: 4px 2px;
+            padding: 6px 3px 10px 3px;
         }}
-        .center  {{ text-align: center; }}
-        .right   {{ text-align: right; }}
-        .bold    {{ font-weight: bold; }}
-        .divider-solid {{ border: none; border-top: 1px solid #000; margin: 5px 0; }}
-        .divider-dash  {{ border: none; border-top: 1px dashed #000; margin: 5px 0; }}
 
-        /* Header */
+        /* ── Utility ─────────────────────── */
+        .center {{ text-align:center; }}
+        .right  {{ text-align:right; }}
+        .dash   {{ border:none; border-top:1px dashed #888; margin:6px 0; }}
+        .solid  {{ border:none; border-top:1.5px solid #111; margin:6px 0; }}
+        .thin   {{ border:none; border-top:1px solid #ccc; margin:4px 0; }}
+
+        /* ── Restaurant Header ───────────── */
         .shop-name {{
-            font-size: 15px;
+            font-size: {fs + 7}px;
             font-weight: 900;
             text-align: center;
-            letter-spacing: 0.5px;
-            margin: 4px 0 2px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 4px 0 3px;
+            line-height: 1.15;
+        }}
+        .shop-tagline {{
+            font-size: {fs - 1}px;
+            text-align: center;
+            color: #444;
+            font-style: italic;
+            margin-bottom: 2px;
         }}
         .shop-info {{
-            font-size: 10px;
+            font-size: {fs - 1}px;
             text-align: center;
             color: #333;
-            line-height: 1.5;
+            line-height: 1.6;
         }}
-
-        /* Invoice label badge */
-        .invoice-label {{
-            text-align: center;
-            font-size: 10px;
+        .shop-phone {{
+            font-size: {fs}px;
             font-weight: 700;
-            letter-spacing: 2px;
-            background: #000;
-            color: #fff;
-            padding: 2px 0;
-            margin: 6px 0 5px;
+            text-align: center;
+            margin-top: 1px;
         }}
 
-        /* Order meta */
+        /* ── Invoice Badge ───────────────── */
+        .invoice-strip {{
+            background: #111;
+            color: #fff;
+            text-align: center;
+            font-size: {fs - 1}px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            padding: 3px 0;
+            margin: 7px 0 5px;
+            text-transform: uppercase;
+        }}
+
+        /* ── Payment Status Badge ────────── */
+        .badge-unpaid {{
+            text-align: center;
+            font-size: {fs + 3}px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #b91c1c;
+            border: 2.5px solid #b91c1c;
+            border-radius: 3px;
+            padding: 4px 0;
+            margin: 5px 0;
+        }}
+        .badge-paid {{
+            text-align: center;
+            font-size: {fs + 3}px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #15803d;
+            border: 2.5px solid #15803d;
+            border-radius: 3px;
+            padding: 4px 0;
+            margin: 5px 0;
+        }}
+
+        /* ── Order Type / Copy Badge ─────── */
+        .order-type-badge {{
+            display: inline-block;
+            border: 1px solid #555;
+            font-size: {fs - 1}px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 1px 8px;
+            text-transform: uppercase;
+            margin: 2px 0;
+        }}
+
+        /* ── Meta info table ─────────────── */
         .meta-table {{
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 4px;
+            margin: 3px 0 4px;
         }}
         .meta-table td {{
-            font-size: 10px;
-            padding: 1px 0;
+            font-size: {fs - 1}px;
+            padding: 1.5px 0;
             vertical-align: top;
+            line-height: 1.4;
         }}
-        .meta-label {{ color: #555; width: 40%; }}
-        .meta-value {{ font-weight: 600; }}
+        .meta-key {{
+            color: #666;
+            width: 38%;
+            text-transform: uppercase;
+            font-size: {fs - 2}px;
+            letter-spacing: 0.3px;
+        }}
+        .meta-val {{
+            font-weight: 700;
+            font-size: {fs - 1}px;
+        }}
 
-        /* Token highlight box */
-        .token-box {{
-            border: 1.5px solid #000;
-            padding: 3px 6px;
-            margin: 5px 0;
+        /* ── Token box ───────────────────── */
+        .token-wrap {{
+            border: 1.5px solid #111;
+            padding: 3px 6px 3px 8px;
+            margin: 5px 0 3px;
             display: table;
             width: 100%;
         }}
-        .token-label {{
+        .token-lbl {{
             display: table-cell;
-            font-size: 10px;
+            font-size: {fs - 2}px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             color: #555;
             vertical-align: middle;
         }}
-        .token-value {{
+        .token-num {{
             display: table-cell;
-            font-size: 16px;
+            font-size: {fs + 6}px;
             font-weight: 900;
             text-align: right;
             vertical-align: middle;
+            letter-spacing: 1px;
         }}
 
-        /* Items table */
+        /* ── Items table ─────────────────── */
         .items-table {{
             width: 100%;
             border-collapse: collapse;
         }}
-        .items-table thead th {{
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            padding: 3px 2px;
-            border-bottom: 1px solid #000;
+        .items-table thead tr {{
+            border-bottom: 1.5px solid #111;
         }}
-        .items-table thead th:first-child {{ text-align: left; }}
-        .items-table thead th:nth-child(2) {{ text-align: center; }}
-        .items-table thead th:nth-child(3),
-        .items-table thead th:nth-child(4) {{ text-align: right; }}
+        .items-table thead th {{
+            font-size: {fs - 1}px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 2px 4px;
+        }}
+        .items-table thead th.col-item  {{ text-align:left; width:46%; }}
+        .items-table thead th.col-qty   {{ text-align:center; width:10%; }}
+        .items-table thead th.col-rate  {{ text-align:right; width:20%; }}
+        .items-table thead th.col-amt   {{ text-align:right; width:24%; }}
 
-        /* Totals */
+        .items-table tbody tr {{
+            border-bottom: 1px dashed #ccc;
+        }}
+        .items-table tbody tr:last-child {{ border-bottom: none; }}
+        .items-table tbody td {{
+            font-size: {fs}px;
+            padding: 4px 2px;
+            vertical-align: top;
+        }}
+        .td-name  {{ text-align:left; font-weight:600; }}
+        .td-qty   {{ text-align:center; }}
+        .td-rate  {{ text-align:right; }}
+        .td-amt   {{ text-align:right; font-weight:700; }}
+        .item-note {{
+            font-size: {fs - 2}px;
+            color: #666;
+            font-style: italic;
+            padding-left: 3px;
+            line-height: 1.3;
+        }}
+
+        /* ── Totals ──────────────────────── */
         .totals-table {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 2px;
         }}
-        .totals-table td {{ padding: 1px 0; }}
+        .tot-label {{
+            font-size: {fs - 1}px;
+            color: #444;
+            padding: 2px 0;
+            width: 55%;
+        }}
+        .tot-sep {{ width:10%; }}
+        .tot-value {{
+            font-size: {fs - 1}px;
+            text-align: right;
+            padding: 2px 0;
+        }}
 
-        /* Grand total row */
-        .grand-row {{
-            background: #000;
+        /* ── Grand Total ─────────────────── */
+        .grand-wrap {{
+            background: #111;
             color: #fff;
-            padding: 5px 6px;
-            margin: 5px 0;
             display: table;
             width: 100%;
+            margin: 6px 0 4px;
+            padding: 6px 8px;
         }}
-        .grand-label {{
+        .grand-lbl {{
             display: table-cell;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 1px;
+            font-size: {fs + 2}px;
+            font-weight: 900;
+            letter-spacing: 2px;
             vertical-align: middle;
+            text-transform: uppercase;
         }}
-        .grand-value {{
+        .grand-val {{
             display: table-cell;
-            font-size: 16px;
+            font-size: {fs + 6}px;
             font-weight: 900;
             text-align: right;
             vertical-align: middle;
+            letter-spacing: 0.5px;
         }}
 
-        /* Footer */
-        .footer-msg {{
-            font-size: 11px;
-            font-weight: 700;
+        /* ── Footer ──────────────────────── */
+        .footer-thank {{
+            font-size: {fs + 1}px;
+            font-weight: 800;
             text-align: center;
-            margin: 6px 0 2px;
+            margin: 5px 0 2px;
+            letter-spacing: 0.5px;
         }}
-        .footer-sub {{
-            font-size: 9px;
+        .footer-extra {{
+            font-size: {fs - 1}px;
             text-align: center;
-            color: #555;
+            color: #444;
+            margin: 1px 0;
         }}
-        .barcode-placeholder {{
+        .footer-powered {{
+            font-size: {fs - 2}px;
             text-align: center;
-            font-size: 9px;
-            color: #aaa;
-            margin-top: 6px;
-            letter-spacing: 3px;
+            color: #888;
+            margin-top: 4px;
+        }}
+        .inv-ref {{
+            font-size: {fs - 2}px;
+            text-align: center;
+            color: #bbb;
+            letter-spacing: 2px;
+            margin-top: 3px;
         }}
     </style>
     </head>
     <body>
 
-        <!-- Logo -->
+        <!-- ══ LOGO ══════════════════════════════ -->
         {logo_html}
 
-        <!-- Shop Header -->
+        <!-- ══ RESTAURANT HEADER ════════════════ -->
         <div class="shop-name">{restaurant_info['name']}</div>
-        <div class="shop-info">
-            {restaurant_info['address']}<br>
-            Tel: {restaurant_info['phone']}
-        </div>
+        {f'<div class="shop-tagline">{restaurant_info.get("tagline","")}</div>' if restaurant_info.get("tagline") else ""}
+        <div class="shop-info">{restaurant_info.get('address','')}</div>
+        <div class="shop-phone">&#128222; {restaurant_info.get('phone','')}</div>
 
-        <!-- Invoice Badge -->
-        <div class="invoice-label">&mdash;&mdash; INVOICE &mdash;&mdash;</div>
+        <!-- ══ INVOICE STRIP ═════════════════════ -->
+        <div class="invoice-strip">&#9472;&#9472;&#9472;  INVOICE  &#9472;&#9472;&#9472;</div>
 
         {header_extra_html}
-        {bill_copy_html}
-        {pay_status_html}
 
-        <!-- Order Meta -->
+        <!-- ══ COPY / ORDER TYPE ════════════════ -->
+        {"<div class='center'><span class='order-type-badge'>" + bill_copy + " COPY</span></div>" if bill_copy else ""}
+        <div class="center"><span class="order-type-badge">{order_type}</span></div>
+
+        <!-- ══ PAYMENT STATUS BADGE ════════════ -->
+        {('<div class="badge-unpaid">&#10007;  U N P A I D  &#10007;</div>' if pay_status == 'UNPAID' else
+          '<div class="badge-paid">&#10003;  P A I D  &#10003;</div>'       if pay_status == 'PAID'   else '')}
+
+        <!-- ══ ORDER META ════════════════════════ -->
         <table class="meta-table">
             <tr>
-                <td class="meta-label">Invoice #</td>
-                <td class="meta-value">{invoice_no}</td>
+                <td class="meta-key">Invoice #</td>
+                <td class="meta-val">{invoice_no}</td>
             </tr>
             <tr>
-                <td class="meta-label">Date</td>
-                <td class="meta-value">{date_str}</td>
+                <td class="meta-key">Date &amp; Time</td>
+                <td class="meta-val">{date_str}</td>
             </tr>
             <tr>
-                <td class="meta-label">Table</td>
-                <td class="meta-value">{table_no}</td>
+                <td class="meta-key">Table</td>
+                <td class="meta-val">{table_no}</td>
             </tr>
-            {customer_row}
-            {waiter_row_meta}
+            {'<tr><td class="meta-key">Customer</td><td class="meta-val">' + customer + '</td></tr>' if show_customer else ''}
+            {'<tr><td class="meta-key">Waiter</td><td class="meta-val">' + waiter + '</td></tr>' if (show_waiter and waiter) else ''}
         </table>
 
-        <!-- Token Highlight -->
-        {token_section}
+        <!-- ══ TOKEN BOX ═════════════════════════ -->
+        {('''<div class="token-wrap">
+            <span class="token-lbl">Token No.</span>
+            <span class="token-num">#''' + str(token_no) + '''</span>
+        </div>''') if show_token else ''}
 
-        <hr class="divider-solid">
+        <hr class="solid">
 
-        <!-- Items Table -->
+        <!-- ══ ITEMS TABLE ═══════════════════════ -->
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width:48%; text-align:left;">Item</th>
-                    <th style="width:10%; text-align:center;">Qty</th>
-                    <th style="width:18%; text-align:right;">Rate</th>
-                    <th style="width:24%; text-align:right;">Amt</th>
+                    <th class="col-item">Item</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-rate">Rate</th>
+                    <th class="col-amt">Amt</th>
                 </tr>
             </thead>
             <tbody>
@@ -738,32 +852,36 @@ def generate_thermal_invoice_html(order_data, restaurant_info=None, print_design
             </tbody>
         </table>
 
-        <hr class="divider-dash">
+        <hr class="dash">
 
-        <!-- Totals -->
+        <!-- ══ TOTALS ════════════════════════════ -->
         <table class="totals-table">
             <tr>
-                <td colspan="2" style="font-size:{fs}px; padding:2px 0;">Subtotal</td>
-                <td style="font-size:{fs}px; text-align:right; padding:2px 0;">Rs.{subtotal:.0f}</td>
+                <td class="tot-label">Subtotal</td>
+                <td class="tot-sep"></td>
+                <td class="tot-value">Rs. {subtotal:.0f}</td>
             </tr>
             {discount_row}
             {service_row}
             {tax_row}
         </table>
 
-        <!-- Grand Total -->
-        <div class="grand-row">
-            <div class="grand-label">TOTAL</div>
-            <div class="grand-value">Rs. {grand_total:.0f}</div>
+        <!-- ══ GRAND TOTAL ═══════════════════════ -->
+        <div class="grand-wrap">
+            <div class="grand-lbl">Total</div>
+            <div class="grand-val">Rs. {grand_total:.0f}</div>
         </div>
 
-        <hr class="divider-dash">
+        <!-- ══ PAYMENT METHOD ROW ════════════════ -->
+        {(f'<table class="totals-table"><tr><td class="tot-label" style="font-weight:700;">Payment Method</td><td class="tot-sep"></td><td class="tot-value" style="font-weight:700;">{pay_method}</td></tr></table>') if pay_method and pay_method not in ("Pending","") else ""}
 
-        <!-- Footer -->
-        <div class="footer-msg">{restaurant_info.get('footer', '*** THANK YOU! VISIT AGAIN ***')}</div>
+        <hr class="dash">
+
+        <!-- ══ FOOTER ════════════════════════════ -->
+        <div class="footer-thank">{restaurant_info.get('footer', '★  Thank You — Visit Again!  ★')}</div>
         {footer_extra_html}
-        <div class="footer-sub">Powered by Abyte POS &bull; {datetime.now().strftime('%d-%m-%Y')}</div>
-        <div class="barcode-placeholder">||||| {invoice_no} |||||</div>
+        <div class="footer-powered">Powered by Abyte POS &bull; {datetime.now().strftime('%d-%m-%Y')}</div>
+        <div class="inv-ref">Ref: {invoice_no}</div>
 
         <br><br>
     </body>
