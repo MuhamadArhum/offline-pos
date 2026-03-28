@@ -1123,51 +1123,105 @@ def print_network(order_data, config, is_kot=False, restaurant_info=None):
                         p.image(logo_path)
                 except Exception as e:
                     print(f"Logo print error: {e}")
+            W = 42  # paper width in chars
+
             if is_kot:
-                p.text(f"{ri.get('name', 'KITCHEN ORDER TICKET')}\n\n")
-                p.text("KITCHEN COPY\n\n")
+                p.set(bold=True)
+                p.text(f"{ri.get('name', 'KITCHEN ORDER TICKET')}\n")
+                p.set(bold=False)
+                p.text("KITCHEN COPY\n")
+                p.text("-" * W + "\n")
             else:
-                p.text(f"{ri.get('name', 'RESTAURANT NAME')}\n")
+                # ── Restaurant header ────────────────────────────────────
+                p.set(bold=True)
+                p.text(f"{ri.get('name', 'RESTAURANT')}\n")
+                p.set(bold=False)
                 p.text(f"{ri.get('address', '')}\n")
-                p.text(f"Tel: {ri.get('phone', '')}\n\n")
+                p.text(f"Tel: {ri.get('phone', '')}\n")
+                p.text("=" * W + "\n")
+
+                # ── PAID / UNPAID badge ──────────────────────────────────
+                pay_status = order_data.get('payment_status', '')
+                if pay_status == 'UNPAID':
+                    p.set(bold=True, double_height=True, double_width=True)
+                    p.text("  *** UNPAID ***\n")
+                    p.set(bold=False, double_height=False, double_width=False)
+                elif pay_status == 'PAID':
+                    p.set(bold=True, double_height=True, double_width=True)
+                    p.text("    *** PAID ***\n")
+                    p.set(bold=False, double_height=False, double_width=False)
+                p.text("=" * W + "\n")
+
+            # ── Order meta ───────────────────────────────────────────────
             p.set(align='left')
-            p.text(f"Table: {order_data.get('table_no', 'Takeaway')}\n")
-            p.text(f"Order: {order_data.get('invoice_no', 'New')}\n")
-            p.text(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
-            p.text("-" * 42 + "\n")
-            p.text("{:<5} {:<20} {:>10}\n".format("Qty", "Item", "Total" if not is_kot else ""))
-            p.text("-" * 42 + "\n")
+            date_val = order_data.get('completed_at') or order_data.get('created_at') or datetime.now()
+            date_str = date_val if isinstance(date_val, str) else date_val.strftime('%d-%m-%Y  %I:%M %p')
+            p.text(f"Invoice : {order_data.get('invoice_no', 'N/A')}\n")
+            p.text(f"Date    : {date_str}\n")
+            p.text(f"Table   : {order_data.get('table_no', 'Takeaway')}\n")
+            p.text(f"Type    : {order_data.get('order_type', 'Dine In')}\n")
+            if order_data.get('customer_name') and order_data['customer_name'] != 'Guest':
+                p.text(f"Customer: {order_data['customer_name']}\n")
+            if order_data.get('waiter'):
+                p.text(f"Waiter  : {order_data['waiter']}\n")
+            if order_data.get('token_no'):
+                p.set(bold=True)
+                p.text(f"Token # : {order_data['token_no']}\n")
+                p.set(bold=False)
+
+            p.text("-" * W + "\n")
+
+            # ── Column header ────────────────────────────────────────────
+            if is_kot:
+                p.text(f"{'Qty':<4}  {'Item':<30}\n")
+            else:
+                p.text(f"{'Qty':<4}  {'Item':<22}  {'Amt':>10}\n")
+            p.text("-" * W + "\n")
+
+            # ── Items ────────────────────────────────────────────────────
             for item in order_data.get('items', []):
-                qty = str(item['qty'])
-                name = item['name'][:20]
+                qty  = str(item['qty'])
+                name = item['name']
                 if is_kot:
                     p.set(bold=True, double_height=True, double_width=True)
                     p.text(f"{qty} x {name}\n")
                     if item.get('note'):
                         p.set(bold=False, double_height=False, double_width=False)
-                        p.text(f"   Note: {item['note']}\n")
-                        p.set(bold=True, double_height=True, double_width=True)
+                        p.text(f"   >> {item['note']}\n")
                     p.set(bold=False, double_height=False, double_width=False)
                 else:
-                    total = f"{item['qty']*item['price']:.2f}"
-                    p.text("{:<5} {:<20} {:>10}\n".format(qty, name, total))
+                    total = item['qty'] * item['price']
+                    # wrap long names
+                    name_short = name[:22]
+                    p.text(f"{qty:<4}  {name_short:<22}  {total:>10.0f}\n")
+                    if len(name) > 22:
+                        p.text(f"      {name[22:]}\n")
                     if item.get('note'):
-                        p.text(f"      ({item['note']})\n")
-            p.text("-" * 42 + "\n")
+                        p.text(f"      Note: {item['note']}\n")
+
+            p.text("=" * W + "\n")
+
+            # ── Totals (receipt only) ────────────────────────────────────
             if not is_kot:
                 p.set(align='right')
-                p.text(f"Subtotal: {order_data.get('subtotal', 0):.2f}\n")
+                p.text(f"Subtotal : Rs.{order_data.get('subtotal', 0):.0f}\n")
                 if order_data.get('discount'):
-                    p.text(f"Discount: -{order_data.get('discount', 0):.2f}\n")
+                    p.text(f"Discount : -Rs.{order_data.get('discount', 0):.0f}\n")
                 if order_data.get('service_charge'):
-                    p.text(f"Service Chg: {order_data.get('service_charge', 0):.2f}\n")
+                    p.text(f"Service  : Rs.{order_data.get('service_charge', 0):.0f}\n")
                 if order_data.get('tax'):
-                    p.text(f"Tax: {order_data.get('tax', 0):.2f}\n")
-                p.set(bold=True)
-                p.text(f"TOTAL: {order_data.get('grand_total', 0):.2f}\n")
-                p.set(bold=False)
+                    p.text(f"Tax/GST  : Rs.{order_data.get('tax', 0):.0f}\n")
+                p.text("-" * W + "\n")
+                p.set(bold=True, double_height=True)
+                p.text(f"TOTAL    : Rs.{order_data.get('grand_total', 0):.0f}\n")
+                p.set(bold=False, double_height=False)
+                pay_method = order_data.get('payment_method', '')
+                if pay_method and pay_method not in ('Pending', ''):
+                    p.text(f"Payment  : {pay_method}\n")
                 p.set(align='center')
-                p.text(f"\n{ri.get('footer', 'Thank You!')}\n")
+                p.text("\n")
+                p.text(f"{ri.get('footer', '*** Thank You! Visit Again ***')}\n")
+                p.text(f"Powered by Abyte POS\n")
             p.cut()
             p.close()
             result[0] = True
