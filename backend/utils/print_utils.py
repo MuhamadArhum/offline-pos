@@ -939,8 +939,17 @@ def _print_thermal_usb(order_data, config, restaurant_info=None):
 # ─── EXISTING FUNCTIONS (unchanged) ───────────────────────────────────────────
 
 def print_receipt(order_data, parent=None):
+    # Auto-derive payment_status if caller did not explicitly set it.
+    # Completed order  → PAID
+    # Running / Kitchen / anything else → UNPAID
+    if not order_data.get('payment_status'):
+        order_data = dict(order_data)
+        order_data['payment_status'] = (
+            'PAID' if order_data.get('status') == 'Completed' else 'UNPAID'
+        )
+
     log_print_job("receipt", order_data, "attempting")
-    
+
     printers = get_printers_by_role("receipt")
     
     config = {}
