@@ -255,6 +255,7 @@ def _card(radius=14, border=None):
 class AuditTab(QWidget):
     def __init__(self):
         super().__init__()
+        self._logs_cache = []
         self.setStyleSheet(f"background: {_BG};")
 
         layout = QVBoxLayout(self)
@@ -295,6 +296,20 @@ class AuditTab(QWidget):
         cl.addSpacing(8)
         cl.addLayout(t_col)
         cl.addStretch()
+
+        # Search filter
+        self.search_audit = QLineEdit()
+        self.search_audit.setPlaceholderText("Filter by user or action…")
+        self.search_audit.setFixedHeight(36)
+        self.search_audit.setMaximumWidth(220)
+        self.search_audit.setStyleSheet(
+            f"QLineEdit {{ background: {_PRIMARY_XL}; border: 1.5px solid {_BORDER};"
+            f" border-radius: 8px; padding: 0 10px; font-size: 12px; color: {_TEXT_PRI}; }}"
+            f"QLineEdit:focus {{ border-color: {_PRIMARY}; background: white; }}"
+        )
+        self.search_audit.textChanged.connect(self._filter_logs)
+        cl.addWidget(self.search_audit)
+
         btn_refresh = _action_btn("Refresh", "fa5s.sync-alt", _PRIMARY, _PRIMARY_DK, height=40)
         btn_refresh.clicked.connect(self.load_data)
         cl.addWidget(btn_refresh)
@@ -384,25 +399,48 @@ class AuditTab(QWidget):
 
         self.load_data()
 
-    # ── ALL ORIGINAL LOGIC — 100% unchanged ──────────────────────────────
+    _ACTION_MAP = {
+        "login":  (_PRIMARY,  _PRIMARY_LT),
+        "logout": (_PRIMARY,  _PRIMARY_LT),
+        "create": (_INFO,     _INFO_LT),
+        "add":    (_INFO,     _INFO_LT),
+        "delete": (_DANGER,   _DANGER_LT),
+        "remove": (_DANGER,   _DANGER_LT),
+        "update": (_WARNING,  _WARNING_LT),
+        "edit":   (_WARNING,  _WARNING_LT),
+        "error":  (_DANGER,   _DANGER_LT),
+    }
+
     def load_data(self, *args):
         skip  = (self.pagination.current_page - 1) * self.pagination.page_size
         limit = self.pagination.page_size
         logs, total = get_logs(skip=skip, limit=limit)
         self.pagination.set_total_records(total)
-        self.table.setRowCount(0)
+        self._logs_cache = list(logs)
+        # Re-apply any active filter
+        q = self.search_audit.text().strip().lower()
+        if q:
+            filtered = [
+                l for l in self._logs_cache
+                if q in l.get('username', '').lower() or q in l.get('action', '').lower()
+            ]
+            self._render_logs(filtered)
+        else:
+            self._render_logs(self._logs_cache)
 
-        action_map = {
-            "login":  (_PRIMARY,  _PRIMARY_LT),
-            "logout": (_PRIMARY,  _PRIMARY_LT),
-            "create": (_INFO,     _INFO_LT),
-            "add":    (_INFO,     _INFO_LT),
-            "delete": (_DANGER,   _DANGER_LT),
-            "remove": (_DANGER,   _DANGER_LT),
-            "update": (_WARNING,  _WARNING_LT),
-            "edit":   (_WARNING,  _WARNING_LT),
-            "error":  (_DANGER,   _DANGER_LT),
-        }
+    def _filter_logs(self):
+        q = self.search_audit.text().strip().lower()
+        if not q:
+            self._render_logs(self._logs_cache)
+        else:
+            filtered = [
+                l for l in self._logs_cache
+                if q in l.get('username', '').lower() or q in l.get('action', '').lower()
+            ]
+            self._render_logs(filtered)
+
+    def _render_logs(self, logs):
+        self.table.setRowCount(0)
 
         for log in logs:
             row = self.table.rowCount()
@@ -425,7 +463,7 @@ class AuditTab(QWidget):
             # ── Col 2: Action badge (color-coded) ────────────────────────
             action_text = log.get('action', '')
             fg_c, bg_c = _TEXT_PRI, _BG
-            for kw, (fg, bg) in action_map.items():
+            for kw, (fg, bg) in self._ACTION_MAP.items():
                 if kw in action_text.lower():
                     fg_c, bg_c = fg, bg
                     break
@@ -446,6 +484,17 @@ class AuditTab(QWidget):
             self.table.setItem(row, 3, det_item)
 
             self.table.setRowHeight(row, 50)
+
+        # Empty state
+        if self.table.rowCount() == 0:
+            self.table.setRowCount(1)
+            self.table.setSpan(0, 0, 1, 4)
+            empty = QTableWidgetItem("No logs found")
+            empty.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setForeground(QColor(_TEXT_HINT))
+            empty.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.table.setItem(0, 0, empty)
+            self.table.setRowHeight(0, 80)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

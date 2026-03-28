@@ -150,7 +150,6 @@ QLineEdit {{
 }}
 QLineEdit:focus {{
     border-color: {_PRIMARY};
-    box-shadow: 0 0 0 3px {_PRIMARY_LT};
 }}
 
 QDoubleSpinBox, QSpinBox {{
@@ -164,7 +163,6 @@ QDoubleSpinBox, QSpinBox {{
 }}
 QDoubleSpinBox:focus, QSpinBox:focus {{
     border-color: {_PRIMARY};
-    box-shadow: 0 0 0 3px {_PRIMARY_LT};
 }}
 
 QComboBox {{
@@ -295,8 +293,7 @@ def _divider():
 
 def _card(radius=16, with_shadow=False):
     f = QFrame()
-    shadow = f"box-shadow:{_SHADOW};" if with_shadow else ""
-    f.setStyleSheet(f"QFrame {{ background:{_SURFACE}; border-radius:{radius}px; border:1px solid {_BORDER}; {shadow} }}")
+    f.setStyleSheet(f"QFrame {{ background:{_SURFACE}; border-radius:{radius}px; border:1px solid {_BORDER}; }}")
     return f
 
 def _badge(text, bg, fg="white", radius=20, bold=True):
@@ -944,7 +941,6 @@ class InventoryPage(QWidget):
                     background: {_SURFACE};
                     border-radius: 18px;
                     border: 1px solid {_BORDER};
-                    box-shadow: {_SHADOW};
                 }}
             """)
             card.setFixedHeight(86)
