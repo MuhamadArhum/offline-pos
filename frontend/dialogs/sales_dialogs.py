@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QDate, QTime
 from PyQt6.QtGui import QColor, QFont
 import qtawesome as qta
+import threading
 from datetime import datetime
 
 from backend.core.config import get_setting
@@ -1189,7 +1190,7 @@ class DoneOrdersDialog(QDialog):
             self.table.setColumnWidth(7, 110)
 
     def reprint_order(self, order):
-        print_receipt(order)
+        threading.Thread(target=print_receipt, args=(order,), daemon=True).start()
         QMessageBox.information(self, "Success", "Receipt sent to printer!")
 
     def process_refund(self, order_id):
@@ -1400,11 +1401,11 @@ class RunningOrdersDialog(QDialog):
             self.table.setRowHeight(r, 52)
 
     def reprint_kot(self, order):
-        print_kot(order)
+        threading.Thread(target=print_kot, args=(order,), daemon=True).start()
         QMessageBox.information(self, "KOT Printed", "KOT sent to printer.")
 
     def reprint_bill(self, order):
-        print_receipt(order)
+        threading.Thread(target=print_receipt, args=(order,), daemon=True).start()
         QMessageBox.information(self, "Bill Printed", "Bill sent to printer.")
 
     def edit_order(self, order):

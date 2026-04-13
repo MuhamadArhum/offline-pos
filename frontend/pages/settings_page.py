@@ -644,132 +644,160 @@ class GeneralSettingsTab(QWidget):
 # ─── Printer Dialog ────────────────────────────────────────────────────────────
 
 class PrinterDialog(QDialog):
+    """
+    Simple printer dialog — user just picks a printer and assigns roles.
+    Supports Windows/USB printers (dropdown) and direct Network IP printers.
+    Both paths use the same HTML invoice design.
+    """
     def __init__(self, parent=None, printer_data=None):
         super().__init__(parent)
         self.setWindowTitle("Add Printer" if not printer_data else "Edit Printer")
         self.setModal(True)
-        self.resize(420, 520)
+        self.resize(440, 480)
         self.setStyleSheet(GLOBAL_STYLE + f"QDialog {{ background-color: {SURFACE}; }}")
         self.printer_data = printer_data or {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(14)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
-        title_lbl = QLabel("Printer" if not printer_data else "Edit Printer")
+        # Title
+        title_lbl = QLabel("Add Printer" if not printer_data else "Edit Printer")
         title_lbl.setStyleSheet(f"font-size: 17px; font-weight: 700; color: {TEXT_PRI};")
         layout.addWidget(title_lbl)
+        sub_lbl = QLabel("Printer add karo — USB ya Network, dono kaam karenge.")
+        sub_lbl.setStyleSheet(f"font-size: 12px; color: {TEXT_SEC};")
+        layout.addWidget(sub_lbl)
         layout.addWidget(divider_line())
-        layout.addSpacing(4)
-
-        form = QFormLayout()
-        form.setSpacing(10)
-        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
         def lbl(t):
             l = QLabel(t)
             l.setStyleSheet(f"color: {TEXT_SEC}; font-weight: 600; font-size: 12px;")
             return l
 
+        # Printer label/name
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         self.name_input = QLineEdit(self.printer_data.get("name", ""))
-        self.name_input.setPlaceholderText("e.g. Kitchen Printer")
-
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(["USB / System Printer", "Network Printer (ESC/POS)"])
-        self.type_combo.setCurrentIndex(0 if self.printer_data.get("type", "usb") == "usb" else 1)
-        self.type_combo.currentIndexChanged.connect(self.toggle_fields)
-
+        self.name_input.setPlaceholderText("e.g. Counter Printer, Kitchen Printer")
         form.addRow(lbl("Printer Label:"), self.name_input)
-        form.addRow(lbl("Connection Type:"), self.type_combo)
         layout.addLayout(form)
 
-        # USB
-        self.usb_container = QWidget()
-        self.usb_container.setStyleSheet("background: transparent; border: none;")
-        usb_layout = QFormLayout(self.usb_container)
-        usb_layout.setContentsMargins(0, 0, 0, 0)
-        self.usb_combo = QComboBox()
-        self.usb_combo.addItems(QPrinterInfo.availablePrinterNames())
-        if self.printer_data.get("type") == "usb":
-            self.usb_combo.setCurrentText(self.printer_data.get("usb_name", ""))
-        usb_layout.addRow(lbl("Select Printer:"), self.usb_combo)
-        layout.addWidget(self.usb_container)
+        # Connection type tabs
+        conn_group = QGroupBox("Connection")
+        conn_group.setStyleSheet(f"""
+            QGroupBox {{
+                border: 1.5px solid {BORDER}; border-radius: 8px;
+                margin-top: 8px; font-weight: 600;
+                color: {TEXT_SEC}; font-size: 12px; background: {SURFACE};
+            }}
+            QGroupBox::title {{ subcontrol-origin: margin; left: 12px; padding: 0 6px; background: {SURFACE}; }}
+        """)
+        conn_layout = QVBoxLayout(conn_group)
+        conn_layout.setContentsMargins(12, 14, 12, 12)
+        conn_layout.setSpacing(8)
 
-        # Network
-        self.net_container = QWidget()
-        self.net_container.setStyleSheet("background: transparent; border: none;")
-        net_layout = QFormLayout(self.net_container)
-        net_layout.setContentsMargins(0, 0, 0, 0)
-        self.ip_input = QLineEdit(self.printer_data.get("ip", ""))
-        self.ip_input.setPlaceholderText("192.168.1.x")
+        # Radio buttons
+        radio_row = QHBoxLayout()
+        self.rb_windows = QRadioButton("Windows / USB Printer")
+        self.rb_network = QRadioButton("Network Printer (IP Address)")
+        self.rb_windows.setStyleSheet(f"font-weight: 600; color: {TEXT_PRI};")
+        self.rb_network.setStyleSheet(f"font-weight: 600; color: {TEXT_PRI};")
+        radio_row.addWidget(self.rb_windows)
+        radio_row.addWidget(self.rb_network)
+        radio_row.addStretch()
+        conn_layout.addLayout(radio_row)
+
+        # Windows printer section
+        self.win_widget = QWidget()
+        self.win_widget.setStyleSheet("background: transparent; border: none;")
+        win_form = QFormLayout(self.win_widget)
+        win_form.setContentsMargins(0, 4, 0, 0)
+        win_form.setSpacing(6)
+        self.usb_combo = QComboBox()
+        available = QPrinterInfo.availablePrinterNames()
+        self.usb_combo.addItems(available if available else ["(No printers found)"])
+        if self.printer_data.get("usb_name"):
+            self.usb_combo.setCurrentText(self.printer_data["usb_name"])
+        win_form.addRow(lbl("Select Printer:"), self.usb_combo)
+        conn_layout.addWidget(self.win_widget)
+
+        # Network printer section
+        self.net_widget = QWidget()
+        self.net_widget.setStyleSheet("background: transparent; border: none;")
+        net_form = QFormLayout(self.net_widget)
+        net_form.setContentsMargins(0, 4, 0, 0)
+        net_form.setSpacing(6)
+        self.ip_input   = QLineEdit(self.printer_data.get("ip", ""))
+        self.ip_input.setPlaceholderText("192.168.1.xxx")
         self.port_input = QSpinBox()
         self.port_input.setRange(1, 65535)
         self.port_input.setValue(self.printer_data.get("port", 9100))
-        net_layout.addRow(lbl("IP Address:"), self.ip_input)
-        net_layout.addRow(lbl("Port:"), self.port_input)
-        layout.addWidget(self.net_container)
+        net_form.addRow(lbl("IP Address:"), self.ip_input)
+        net_form.addRow(lbl("Port:"),       self.port_input)
+        conn_layout.addWidget(self.net_widget)
+
+        layout.addWidget(conn_group)
 
         # Roles
-        role_group = QGroupBox("Printer Roles")
+        role_group = QGroupBox("Print Role")
         role_group.setStyleSheet(f"""
             QGroupBox {{
-                border: 1.5px solid {BORDER};
-                border-radius: 8px;
-                margin-top: 10px;
-                font-weight: 600;
-                color: {TEXT_SEC};
-                font-size: 12px;
-                background: {SURFACE};
+                border: 1.5px solid {BORDER}; border-radius: 8px;
+                margin-top: 8px; font-weight: 600;
+                color: {TEXT_SEC}; font-size: 12px; background: {SURFACE};
             }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 12px;
-                padding: 0 6px;
-                background: {SURFACE};
-            }}
+            QGroupBox::title {{ subcontrol-origin: margin; left: 12px; padding: 0 6px; background: {SURFACE}; }}
         """)
-        role_layout = QVBoxLayout(role_group)
-        role_layout.setContentsMargins(12, 14, 12, 12)
-        self.role_receipt = QCheckBox("Receipt Printer (Cashier)")
-        self.role_kot     = QCheckBox("Kitchen Order Ticket (KOT)")
+        role_lay = QHBoxLayout(role_group)
+        role_lay.setContentsMargins(12, 14, 12, 12)
+        role_lay.setSpacing(20)
+        self.role_receipt = QCheckBox("Receipt / Invoice")
+        self.role_kot     = QCheckBox("Kitchen (KOT)")
+        self.role_receipt.setStyleSheet(f"font-weight: 600; color: {TEXT_PRI};")
+        self.role_kot.setStyleSheet(f"font-weight: 600; color: {TEXT_PRI};")
         roles = self.printer_data.get("roles", [])
-        if "receipt" in roles: self.role_receipt.setChecked(True)
-        if "kot"     in roles: self.role_kot.setChecked(True)
-        role_layout.addWidget(self.role_receipt)
-        role_layout.addWidget(self.role_kot)
+        self.role_receipt.setChecked("receipt" in roles)
+        self.role_kot.setChecked("kot" in roles)
+        role_lay.addWidget(self.role_receipt)
+        role_lay.addWidget(self.role_kot)
+        role_lay.addStretch()
         layout.addWidget(role_group)
-
-        # Test
-        btn_test = make_ghost_btn("  Test Connection", icon=qta.icon('fa5s.plug', color=TEXT_SEC))
-        btn_test.clicked.connect(self.test_connection)
-        layout.addWidget(btn_test)
 
         layout.addStretch()
 
-        # Footer Buttons
+        # Buttons
         layout.addWidget(divider_line())
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
+        btn_test   = make_ghost_btn("  Test Print", icon=qta.icon('fa5s.print', color=TEXT_SEC))
         cancel_btn = make_ghost_btn("Cancel")
+        save_btn   = make_btn("  Save", ACCENT, icon=qta.icon('fa5s.save', color='white'), height=40)
+        btn_test.clicked.connect(self.test_connection)
         cancel_btn.clicked.connect(self.reject)
-        save_btn = make_btn("  Save Printer", ACCENT, icon=qta.icon('fa5s.save', color='white'), height=42)
         save_btn.clicked.connect(self.validate_and_accept)
-        btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(btn_test)
         btn_row.addStretch()
+        btn_row.addWidget(cancel_btn)
         btn_row.addWidget(save_btn)
         layout.addLayout(btn_row)
 
-        self.toggle_fields()
+        # Set initial state
+        is_network = self.printer_data.get("type") == "network"
+        self.rb_network.setChecked(is_network)
+        self.rb_windows.setChecked(not is_network)
+        self.rb_windows.toggled.connect(self._toggle_conn)
+        self._toggle_conn(not is_network)
 
-    def toggle_fields(self):
-        # ── Logic unchanged ──
-        is_usb = self.type_combo.currentIndex() == 0
-        self.usb_container.setVisible(is_usb)
-        self.net_container.setVisible(not is_usb)
+    def _toggle_conn(self, is_windows):
+        self.win_widget.setVisible(is_windows)
+        self.net_widget.setVisible(not is_windows)
 
     def test_connection(self):
-        # ── Logic unchanged ──
-        data = self.get_temp_data()
+        data = self._build_data()
+        if not data["name"]:
+            data["name"] = "Test"
         temp_config = {
             "printer_config": data,
             "restaurant_info": load_config().get("restaurant_info", {})
@@ -777,33 +805,42 @@ class PrinterDialog(QDialog):
         p_type = "kot" if "kot" in data["roles"] and "receipt" not in data["roles"] else "receipt"
         success, msg = print_test_page_v2(temp_config, print_type=p_type)
         if success:
-            QMessageBox.information(self, "Success", f"Test print sent to {data['name']}.")
+            QMessageBox.information(self, "Test OK", f"Test print sent successfully!")
         else:
-            QMessageBox.warning(self, "Error", f"Test print failed: {msg}")
+            QMessageBox.warning(self, "Test Failed", f"{msg}")
 
-    def get_temp_data(self):
-        # ── Logic unchanged ──
+    def _build_data(self):
         roles = []
         if self.role_receipt.isChecked(): roles.append("receipt")
         if self.role_kot.isChecked():     roles.append("kot")
+        is_windows = self.rb_windows.isChecked()
         return {
-            "name":     self.name_input.text(),
-            "type":     "usb" if self.type_combo.currentIndex() == 0 else "network",
-            "usb_name": self.usb_combo.currentText(),
-            "ip":       self.ip_input.text(),
+            "name":     self.name_input.text().strip(),
+            "type":     "usb" if is_windows else "network",
+            "usb_name": self.usb_combo.currentText() if is_windows else "",
+            "ip":       self.ip_input.text().strip(),
             "port":     self.port_input.value(),
-            "roles":    roles
+            "roles":    roles,
         }
 
     def validate_and_accept(self):
-        # ── Logic unchanged ──
-        if not self.name_input.text().strip():
-            QMessageBox.warning(self, "Error", "Printer Label is required.")
+        data = self._build_data()
+        if not data["name"]:
+            QMessageBox.warning(self, "Error", "Printer ka naam likhna zaroori hai.")
+            return
+        if data["type"] == "usb" and not data["usb_name"]:
+            QMessageBox.warning(self, "Error", "Koi printer select nahi kiya.")
+            return
+        if data["type"] == "network" and not data["ip"]:
+            QMessageBox.warning(self, "Error", "Network printer ka IP address likhein.")
+            return
+        if not data["roles"]:
+            QMessageBox.warning(self, "Error", "Kam az kam ek role select karein (Receipt ya KOT).")
             return
         self.accept()
 
     def get_data(self):
-        return self.get_temp_data()
+        return self._build_data()
 
 
 # ─── Printer Settings Tab ──────────────────────────────────────────────────────

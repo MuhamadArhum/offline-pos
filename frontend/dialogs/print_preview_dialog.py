@@ -223,29 +223,29 @@ class PrintPreviewDialog(QDialog):
 
     def _print_kot(self):
         self._set_printing(True)
+        order = self.order_data
         def _do():
-            success, msg = print_kot(self.order_data)
-            self._set_printing(False)
+            success, msg = print_kot(order)
             if not success:
-                QMessageBox.warning(self, "KOT Print Error", msg)
+                print(f"[KOT Print Error] {msg}")
         threading.Thread(target=_do, daemon=True).start()
         self.accept()
 
     def _print_bill(self):
         self._set_printing(True)
+        order = self.order_data
         def _do():
-            success, msg = print_receipt(self.order_data)
-            self._set_printing(False)
+            success, msg = print_receipt(order)
             if not success:
-                QMessageBox.warning(self, "Bill Print Error", msg)
+                print(f"[Bill Print Error] {msg}")
         threading.Thread(target=_do, daemon=True).start()
         self.accept()
 
     def _print_both(self):
         self._set_printing(True)
+        order = self.order_data
         def _do():
-            print_kot(self.order_data)
-            print_receipt(self.order_data)
-            self._set_printing(False)
+            print_kot(order)
+            print_receipt(order)
         threading.Thread(target=_do, daemon=True).start()
         self.accept()
